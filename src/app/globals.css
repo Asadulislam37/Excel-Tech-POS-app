@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #10161d;
+  --ink-2: #1a222c;
+  --paper: #f3f5f7;
+  --card: #ffffff;
+  --line: #e3e8ee;
+  --teal: #0d7a72;
+  --teal-dark: #0a5f59;
+  --teal-soft: #e2f1ef;
+  --amber: #d97706;
+  --amber-soft: #fdf1e0;
+  --red: #dc2626;
+  --red-soft: #fdecec;
+  --text: #1b2430;
+  --muted: #67737f;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink-2);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-teal: var(--teal);
+  --color-tealdark: var(--teal-dark);
+  --color-tealsoft: var(--teal-soft);
+  --color-amber: var(--amber);
+  --color-ambersoft: var(--amber-soft);
+  --color-red: var(--red);
+  --color-redsoft: var(--red-soft);
+  --color-body: var(--text);
+  --color-muted: var(--muted);
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+/* IMEI / serial chip — the PulsePOS signature */
+.serial-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+  border: 1px solid #bcdcd8;
+  border-radius: 6px;
+  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px;
+  transition: background .15s ease; cursor: pointer;
+}
+.btn-primary { background: var(--teal); color: #fff; }
+.btn-primary:hover { background: var(--teal-dark); }
+.btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+.btn-ghost:hover { background: var(--paper); }
+.input {
+  width: 100%; border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 12px; background: #fff; font-size: 14px; outline: none;
+}
+.input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
+.th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 10px 12px; }
+.td { padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; }
