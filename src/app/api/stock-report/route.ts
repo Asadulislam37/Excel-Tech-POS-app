@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const brandId = p.get("brandId") ?? "";
   const type = p.get("type") ?? "";
   const filter = p.get("filter") || "in";
+  const outletId = p.get("outletId") ?? "";
   const page = Math.max(1, Number(p.get("page")) || 1);
 
   const variants = await prisma.productVariant.findMany({
@@ -41,8 +42,12 @@ export async function GET(req: NextRequest) {
       },
       color: { select: { name: true } },
       size: { select: { name: true } },
-      stockLevels: { select: { quantity: true } },
-      _count: { select: { serialUnits: { where: { status: "IN_STOCK" } } } },
+      stockLevels: { where: outletId ? { outletId } : {}, select: { quantity: true } },
+      _count: {
+        select: {
+          serialUnits: { where: { status: "IN_STOCK", ...(outletId && { outletId }) } },
+        },
+      },
     },
     orderBy: { id: "asc" },
   });

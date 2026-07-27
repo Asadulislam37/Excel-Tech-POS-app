@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { taka } from "@/lib/format";
-import { FileSpreadsheet, ImageIcon, Printer } from "lucide-react";
+import { exportCsv, exportExcel } from "@/lib/export";
+import { ImageIcon } from "lucide-react";
 import StockTabs from "@/components/StockTabs";
+import StockFilterBar, { StockCfg, StockFilters } from "@/components/StockFilterBar";
 
-type Named = { id: string; name: string };
 type Row = {
   id: string; sku: string; category: string; brand: string; imageUrl?: string | null;
   name: string; variant: string; qty: number;
@@ -13,42 +14,35 @@ type Row = {
 };
 type Report = { rows: Row[]; total: number; totalQty: number; totalValue: number };
 
+const EMPTY: StockFilters = { outletId: "", q: "", categoryId: "", brandId: "", type: "", filter: "all" };
+
 export default function StockReportPage() {
-  const [q, setQ] = useState("");
-  const [fCat, setFCat] = useState("");
-  const [fBrand, setFBrand] = useState("");
-  const [fType, setFType] = useState("");
-  const [fStock, setFStock] = useState("all");
+  const [f, setF] = useState<StockFilters>(EMPTY);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<Report | null>(null);
-  const [cfg, setCfg] = useState<{ brands: Named[]; categories: Named[] } | null>(null);
+  const [cfg, setCfg] = useState<StockCfg | null>(null);
 
   const load = useCallback(async () => {
-    const params = new URLSearchParams({ q, filter: fStock, page: String(page) });
-    if (fCat) params.set("categoryId", fCat);
-    if (fBrand) params.set("brandId", fBrand);
-    if (fType) params.set("type", fType);
+    const params = new URLSearchParams({ q: f.q, filter: f.filter, page: String(page) });
+    if (f.categoryId) params.set("categoryId", f.categoryId);
+    if (f.brandId) params.set("brandId", f.brandId);
+    if (f.type) params.set("type", f.type);
+    if (f.outletId) params.set("outletId", f.outletId);
     const res = await fetch(`/api/stock-report?${params}`);
     if (res.ok) setData(await res.json());
-  }, [q, fCat, fBrand, fType, fStock, page]);
+  }, [f, page]);
 
   useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
-  useEffect(() => { setPage(1); }, [q, fCat, fBrand, fType, fStock]);
   useEffect(() => { fetch("/api/config").then(async (r) => r.ok && setCfg(await r.json())); }, []);
 
-  const exportCsv = () => {
-    if (!data) return;
-    const head = ["SKU", "Category", "Brand", "Product", "Variant", "QTY", "Costing", "Wholesale", "Retail", "MRP", "Warranty"];
-    const lines = data.rows.map((r) =>
-      [r.sku, r.category, r.brand, r.name, r.variant, r.qty, r.costing, r.wholesale, r.retail, r.mrp, r.warranty]
-        .map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
-    const blob = new Blob(["﻿" + [head.join(","), ...lines].join("\n")], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "stock-report.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
+  const change = (next: Partial<StockFilters>) => { setF((p) => ({ ...p, ...next })); setPage(1); };
+
+  const HEAD = ["SL.", "SKU", "Category", "Brand", "Product Name", "QTY", "Costing", "Wholesale", "Retail Price", "MRP", "Warranty"];
+  const sheet = () => (data?.rows ?? []).map((r, i) => [
+    (page - 1) * 50 + i + 1, r.sku, r.category, r.brand,
+    [r.name, r.variant].filter(Boolean).join(" — "),
+    r.qty, r.costing, r.wholesale, r.retail, r.mrp, r.warranty,
+  ]);
 
   return (
     <div className="space-y-3">
@@ -62,32 +56,9 @@ export default function StockReportPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input className="input w-52" placeholder="Type here…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="input w-40" value={fCat} onChange={(e) => setFCat(e.target.value)}>
-          <option value="">Category</option>
-          {cfg?.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select className="input w-40" value={fBrand} onChange={(e) => setFBrand(e.target.value)}>
-          <option value="">Brand</option>
-          {cfg?.brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
-        <select className="input w-40" value={fType} onChange={(e) => setFType(e.target.value)}>
-          <option value="">Stock Type</option>
-          <option value="SERIALIZED">Phone / IMEI</option>
-          <option value="STANDARD">Accessory</option>
-        </select>
-        <select className="input w-40" value={fStock} onChange={(e) => setFStock(e.target.value)}>
-          <option value="all">All items</option>
-          <option value="in">In stock</option>
-          <option value="out">Out of stock</option>
-          <option value="low">Low stock</option>
-        </select>
-        <div className="ml-auto flex gap-2">
-          <button className="btn btn-ghost" title="Export CSV / Excel" onClick={exportCsv}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
-        </div>
-      </div>
+      <StockFilterBar cfg={cfg} value={f} onChange={change}
+        onExcel={() => exportExcel("stock-report", HEAD, sheet())}
+        onCsv={() => exportCsv("stock-report", HEAD, sheet())} />
 
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[960px]">

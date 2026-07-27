@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const [brands, categories, colors, sizes, units, warranties, suppliers] = await Promise.all([
+  const [brands, categories, colors, sizes, units, warranties, suppliers, outlets] = await Promise.all([
     prisma.brand.findMany({ orderBy: { name: "asc" } }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
     prisma.color.findMany({ orderBy: { name: "asc" } }),
@@ -12,8 +12,9 @@ export async function GET() {
     prisma.unit.findMany({ orderBy: { name: "asc" } }),
     prisma.warrantyPolicy.findMany({ orderBy: { name: "asc" } }),
     prisma.supplier.findMany({ orderBy: { name: "asc" } }),
+    prisma.outlet.findMany({ orderBy: { name: "asc" } }),
   ]);
-  return NextResponse.json({ brands, categories, colors, sizes, units, warranties, suppliers });
+  return NextResponse.json({ brands, categories, colors, sizes, units, warranties, suppliers, outlets });
 }
 
 // POST /api/config { kind: "brand"|"category"|"color"|"size"|"unit"|"warranty", name, durationDays? }
