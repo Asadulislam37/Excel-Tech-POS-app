@@ -43,5 +43,8 @@ src/generated
 
 !.env.example
 
+# one-off import data (contains wholesale prices)
+prisma/import-products.json
+
 # Local Netlify folder
 .netlify

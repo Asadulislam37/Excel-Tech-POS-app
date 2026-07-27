@@ -58,6 +58,8 @@ export default function ProductsPage() {
   const [show, setShow] = useState(false);
   const [err, setErr] = useState("");
   const [menuFor, setMenuFor] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [editP, setEditP] = useState<Product | null>(null);
   const [editErr, setEditErr] = useState("");
   const [barcodeV, setBarcodeV] = useState<{ p: Product; v: Variant } | null>(null);
@@ -66,14 +68,18 @@ export default function ProductsPage() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    const params = new URLSearchParams({ q, status: tab });
+    const params = new URLSearchParams({ q, status: tab, page: String(page) });
     if (fCat) params.set("categoryId", fCat);
     if (fBrand) params.set("brandId", fBrand);
     const res = await fetch(`/api/products?${params}`);
-    if (res.ok) setProducts(await res.json());
-  }, [q, tab, fCat, fBrand]);
+    if (res.ok) {
+      setTotal(Number(res.headers.get("x-total-count")) || 0);
+      setProducts(await res.json());
+    }
+  }, [q, tab, fCat, fBrand, page]);
 
   useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
+  useEffect(() => { setPage(1); }, [q, tab, fCat, fBrand]);
   useEffect(() => { fetch("/api/config").then(async (r) => r.ok && setCfg(await r.json())); }, []);
   useEffect(() => {
     const close = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenuFor(""); };
@@ -257,6 +263,16 @@ export default function ProductsPage() {
           </tbody>
         </table>
       </div>
+
+      {total > 50 && (
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-muted">{total} products · page {page} of {Math.ceil(total / 50)}</span>
+          <div className="flex gap-2">
+            <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>‹ Prev</button>
+            <button className="btn btn-ghost" disabled={page >= Math.ceil(total / 50)} onClick={() => setPage((p) => p + 1)}>Next ›</button>
+          </div>
+        </div>
+      )}
 
       {/* edit modal */}
       {editP && cfg && (
