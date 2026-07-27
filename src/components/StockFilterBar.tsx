@@ -8,9 +8,10 @@ export type StockFilters = {
   outletId: string; q: string; categoryId: string; brandId: string; type: string; filter: string;
 };
 
-// Each control sits in its own sized cell, so the row never collapses into a stack.
+// Each control sits in its own sized cell, so the row never collapses into a stack
+// and the six filters plus the export buttons stay on one line on desktop.
 const Cell = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-w-[140px] flex-1 basis-[150px] lg:max-w-[190px]">{children}</div>
+  <div className="min-w-[108px] flex-1 basis-[120px] lg:max-w-[180px]">{children}</div>
 );
 
 export default function StockFilterBar({
