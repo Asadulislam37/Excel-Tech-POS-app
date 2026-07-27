@@ -44,35 +44,40 @@ body {
   font-size: 14px;
 }
 
-/* IMEI / serial chip — the PulsePOS signature */
-.serial-chip {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  background: var(--teal-soft);
-  color: var(--teal-dark);
-  border: 1px solid #bcdcd8;
-  border-radius: 6px;
-  padding: 2px 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
+/* Component classes live in the components layer so Tailwind utilities
+   (w-44, px-3, bg-ink …) always win over them. */
+@layer components {
+  /* IMEI / serial chip — the PulsePOS signature */
+  .serial-chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    background: var(--teal-soft);
+    color: var(--teal-dark);
+    border: 1px solid #bcdcd8;
+    border-radius: 6px;
+    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
 
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px;
-  transition: background .15s ease; cursor: pointer;
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px;
+    transition: background .15s ease; cursor: pointer;
+  }
+  .btn-primary { background: var(--teal); color: #fff; }
+  .btn-primary:hover { background: var(--teal-dark); }
+  .btn-ghost { background: var(--card); border: 1px solid var(--line); color: var(--text); }
+  .btn-ghost:hover { background: var(--paper); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .input {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 12px; background: #fff; font-size: 14px; outline: none;
+  }
+  .input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
+  .th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 10px 12px; }
+  .td { padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; }
 }
-.btn-primary { background: var(--teal); color: #fff; }
-.btn-primary:hover { background: var(--teal-dark); }
-.btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
-.btn-ghost:hover { background: var(--paper); }
-.input {
-  width: 100%; border: 1px solid var(--line); border-radius: 8px;
-  padding: 8px 12px; background: #fff; font-size: 14px; outline: none;
-}
-.input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
-.th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 10px 12px; }
-.td { padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; }
