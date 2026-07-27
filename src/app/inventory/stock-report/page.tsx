@@ -18,7 +18,7 @@ export default function StockReportPage() {
   const [fCat, setFCat] = useState("");
   const [fBrand, setFBrand] = useState("");
   const [fType, setFType] = useState("");
-  const [fStock, setFStock] = useState("in");
+  const [fStock, setFStock] = useState("all");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<Report | null>(null);
   const [cfg, setCfg] = useState<{ brands: Named[]; categories: Named[] } | null>(null);
@@ -78,10 +78,10 @@ export default function StockReportPage() {
           <option value="STANDARD">Accessory</option>
         </select>
         <select className="input w-40" value={fStock} onChange={(e) => setFStock(e.target.value)}>
+          <option value="all">All items</option>
           <option value="in">In stock</option>
           <option value="out">Out of stock</option>
           <option value="low">Low stock</option>
-          <option value="all">All items</option>
         </select>
         <div className="ml-auto flex gap-2">
           <button className="btn btn-ghost" title="Export CSV / Excel" onClick={exportCsv}><FileSpreadsheet size={16} /></button>

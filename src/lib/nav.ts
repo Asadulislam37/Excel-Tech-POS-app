@@ -12,8 +12,9 @@ export const NAV: NavItem[] = [
     label: "Inventory", icon: "Boxes",
     children: [
       { label: "Product List", href: "/inventory/products", built: true },
+      { label: "Stock Entry", href: "/inventory/stock-entry", built: true },
       { label: "Stock Report", href: "/inventory/stock-report", built: true },
-      { label: "Stock Report Detailed", href: "/inventory/stock-report-detailed", phase: 2 },
+      { label: "Stock Report Detailed", href: "/inventory/stock-report-detailed", built: true },
       { label: "Stock Ledger Report", href: "/inventory/stock-ledger", built: true },
       { label: "Stock Transfer", href: "/inventory/transfer", phase: 3 },
       { label: "Stock Transfer History", href: "/inventory/transfer-history", phase: 3 },
