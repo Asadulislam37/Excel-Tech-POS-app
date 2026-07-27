@@ -156,6 +156,7 @@ model ProductVariant {
   size          Size?   @relation(fields: [sizeId], references: [id])
   costPrice     Decimal @db.Decimal(12, 2)
   salePrice     Decimal @db.Decimal(12, 2)
+  mrp           Decimal? @db.Decimal(12, 2) // printed maximum retail price
   onlinePrice   Decimal? @db.Decimal(12, 2) // storefront price if different
   reorderLevel  Int     @default(2)
   isActive      Boolean @default(true)

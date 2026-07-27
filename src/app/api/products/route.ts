@@ -3,20 +3,26 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/products?q=redmi  → products with variants, stock, in-stock serial counts
+// GET /api/products?q=redmi&status=active|inactive&categoryId=&brandId=
 export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+  const p = req.nextUrl.searchParams;
+  const q = p.get("q")?.trim() ?? "";
+  const isActive = p.get("status") !== "inactive";
+  const categoryId = p.get("categoryId") ?? "";
+  const brandId = p.get("brandId") ?? "";
   const products = await prisma.product.findMany({
-    where: q
-      ? {
-          isActive: true,
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { brand: { name: { contains: q, mode: "insensitive" } } },
-            { variants: { some: { OR: [{ sku: { contains: q, mode: "insensitive" } }, { barcode: q }] } } },
-          ],
-        }
-      : { isActive: true },
+    where: {
+      isActive,
+      ...(categoryId && { categoryId }),
+      ...(brandId && { brandId }),
+      ...(q && {
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { brand: { name: { contains: q, mode: "insensitive" } } },
+          { variants: { some: { OR: [{ sku: { contains: q, mode: "insensitive" } }, { barcode: q }] } } },
+        ],
+      }),
+    },
     include: {
       brand: true,
       category: true,
@@ -56,13 +62,14 @@ export async function POST(req: NextRequest) {
       categoryId: categoryId || undefined,
       warrantyPolicyId: warrantyPolicyId || undefined,
       variants: {
-        create: variants.map((v: { sku: string; colorId?: string; sizeId?: string; costPrice: number; salePrice: number; barcode?: string }) => ({
+        create: variants.map((v: { sku: string; colorId?: string; sizeId?: string; costPrice: number; salePrice: number; mrp?: number; barcode?: string }) => ({
           sku: v.sku,
           barcode: v.barcode || undefined,
           colorId: v.colorId || undefined,
           sizeId: v.sizeId || undefined,
           costPrice: v.costPrice,
           salePrice: v.salePrice,
+          mrp: v.mrp || undefined,
         })),
       },
     },
