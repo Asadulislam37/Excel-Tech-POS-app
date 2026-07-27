@@ -154,8 +154,9 @@ model ProductVariant {
   color         Color?  @relation(fields: [colorId], references: [id])
   sizeId        String?
   size          Size?   @relation(fields: [sizeId], references: [id])
-  costPrice     Decimal @db.Decimal(12, 2)
-  salePrice     Decimal @db.Decimal(12, 2)
+  costPrice     Decimal @db.Decimal(12, 2) // costing (what we paid)
+  wholesalePrice Decimal? @db.Decimal(12, 2) // price to resellers
+  salePrice     Decimal @db.Decimal(12, 2) // retail price charged at POS
   mrp           Decimal? @db.Decimal(12, 2) // printed maximum retail price
   onlinePrice   Decimal? @db.Decimal(12, 2) // storefront price if different
   reorderLevel  Int     @default(2)

@@ -69,13 +69,14 @@ export async function POST(req: NextRequest) {
       categoryId: categoryId || undefined,
       warrantyPolicyId: warrantyPolicyId || undefined,
       variants: {
-        create: variants.map((v: { sku: string; colorId?: string; sizeId?: string; costPrice: number; salePrice: number; mrp?: number; barcode?: string }) => ({
+        create: variants.map((v: { sku: string; colorId?: string; sizeId?: string; costPrice: number; wholesalePrice?: number; salePrice: number; mrp?: number; barcode?: string }) => ({
           sku: v.sku,
           barcode: v.barcode || undefined,
           colorId: v.colorId || undefined,
           sizeId: v.sizeId || undefined,
           costPrice: v.costPrice,
-          salePrice: v.salePrice,
+          wholesalePrice: v.wholesalePrice || undefined,
+          salePrice: v.salePrice || v.mrp || 0,
           mrp: v.mrp || undefined,
         })),
       },
