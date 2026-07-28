@@ -98,8 +98,8 @@ enum RoleName {
 model User {
   id           String   @id @default(cuid())
   name         String
-  phone        String   @unique
-  email        String?  @unique
+  email        String   @unique
+  phone        String?  @unique
   passwordHash String
   role         RoleName @default(SALESMAN)
   outletId     String?

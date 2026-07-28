@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NAV, NavGroup, NavLeaf, NavNode, isGroup } from "@/lib/nav";
 import {
   LayoutDashboard, ScanBarcode, Boxes, ShoppingCart, ClipboardList, FileText,
   RefreshCcw, PackagePlus, Users, MessageSquare, Calculator, ShieldCheck,
-  CalendarClock, Gift, Settings, BarChart3, ChevronDown, Menu, X, Store, Globe,
+  CalendarClock, Gift, Settings, BarChart3, ChevronDown, Menu, X, Store, Globe, LogOut,
 } from "lucide-react";
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -24,9 +24,28 @@ function containsPath(node: NavNode, pathname: string): boolean {
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [mobileOpen, setMobileOpen] = useState(false);
-  if (pathname.startsWith("/shop")) return <>{children}</>;
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const bare = pathname.startsWith("/shop") || pathname === "/login" || pathname === "/signup";
+
+  useEffect(() => {
+    if (bare) return;
+    fetch("/api/auth/me").then(async (r) => { if (r.ok) setUser((await r.json()).user); });
+  }, [bare, pathname]);
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  };
+
+  if (bare) return <>{children}</>;
+
+  const initials = (user?.name ?? "").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "··";
 
   const leaf = (l: NavLeaf, depth: number) => {
     const active = pathname === l.href;
@@ -142,8 +161,25 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <Link href="/sales/pos" className="btn btn-primary h-9">
               <ShoppingCart size={15} /> New Invoice
             </Link>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-tealsoft text-[12px] font-bold text-tealdark">
-              AS
+            <div className="relative">
+              <button className="flex items-center gap-2" onClick={() => setMenuOpen((m) => !m)}>
+                {user && <div className="hidden text-right sm:block"><div className="text-[13px] font-semibold leading-tight">{user.name}</div><div className="text-[11px] capitalize text-muted">{user.role.toLowerCase()}</div></div>}
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-tealsoft text-[12px] font-bold text-tealdark">{initials}</div>
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                  <div className="card absolute right-0 top-11 z-40 w-48 p-1 shadow-lg">
+                    <div className="border-b border-line px-3 py-2">
+                      <div className="text-[13px] font-semibold">{user?.name ?? "—"}</div>
+                      <div className="text-[11px] text-muted">{user?.role ?? ""}</div>
+                    </div>
+                    <button className="mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold text-red hover:bg-redsoft" onClick={logout}>
+                      <LogOut size={14} /> Log out
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>
