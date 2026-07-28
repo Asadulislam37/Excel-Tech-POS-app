@@ -517,6 +517,7 @@ model Purchase {
   createdBy  User?    @relation(fields: [createdById], references: [id])
   subTotal   Decimal  @db.Decimal(14, 2)
   discount   Decimal  @default(0) @db.Decimal(14, 2)
+  additionalExpense Decimal @default(0) @db.Decimal(14, 2)
   grandTotal Decimal  @db.Decimal(14, 2)
   paidTotal  Decimal  @default(0) @db.Decimal(14, 2)
   dueTotal   Decimal  @default(0) @db.Decimal(14, 2)
