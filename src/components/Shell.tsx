@@ -8,7 +8,18 @@ import {
   LayoutDashboard, ScanBarcode, Boxes, ShoppingCart, ClipboardList, FileText,
   RefreshCcw, PackagePlus, Users, MessageSquare, Calculator, ShieldCheck,
   CalendarClock, Gift, Settings, BarChart3, ChevronDown, Menu, X, Store, Globe, LogOut,
+  LayoutGrid, FilePlus2, RotateCcw, DollarSign, HandCoins, ArrowUpRight,
 } from "lucide-react";
+
+// Header "Quick Access" shortcuts.
+const QUICK = [
+  { label: "Create Invoice", href: "/sales/pos", icon: FilePlus2 },
+  { label: "Create Return", href: "/returns/sale", icon: RotateCcw },
+  { label: "Create Expense", href: "/accounting/expense", icon: DollarSign },
+  { label: "Collect Due", href: "/accounting/due-collection", icon: HandCoins },
+  { label: "Create Purchase", href: "/purchase", icon: ShoppingCart },
+  { label: "Supplier Payment", href: "/accounting/supplier-payment", icon: ArrowUpRight },
+];
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   LayoutDashboard, ScanBarcode, Boxes, ShoppingCart, ClipboardList, FileText,
@@ -29,6 +40,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   const bare = pathname.startsWith("/shop") || ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
 
@@ -98,13 +110,15 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         }`}
       >
         <div className="mb-5 flex items-center gap-2.5 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal">
-            <Store size={18} className="text-white" />
-          </div>
-          <div>
-            <div className="text-[15px] font-bold leading-tight text-white">Excel Tech POS</div>
-            <div className="text-[11px] text-slate-400">Shyamoli Square, Dhaka</div>
-          </div>
+          <Link href="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal">
+              <Store size={18} className="text-white" />
+            </div>
+            <div>
+              <div className="text-[15px] font-bold leading-tight text-white">Excel Tech POS</div>
+              <div className="text-[11px] text-slate-400">Shyamoli Square, Dhaka</div>
+            </div>
+          </Link>
           <button className="ml-auto text-slate-400 lg:hidden" onClick={() => setMobileOpen(false)}>
             <X size={18} />
           </button>
@@ -161,6 +175,31 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <Link href="/sales/pos" className="btn btn-primary h-9">
               <ShoppingCart size={15} /> New Invoice
             </Link>
+
+            {/* Quick Access */}
+            <div className="relative">
+              <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-body hover:bg-paper"
+                title="Quick Access" onClick={() => setQuickOpen((o) => !o)}>
+                <LayoutGrid size={17} />
+              </button>
+              {quickOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setQuickOpen(false)} />
+                  <div className="card absolute right-0 top-11 z-40 w-56 p-1 shadow-lg">
+                    <div className="px-3 py-2 text-[13px] font-bold">Quick Access</div>
+                    <div className="border-t border-line pt-1">
+                      {QUICK.map((qa) => (
+                        <Link key={qa.href} href={qa.href} onClick={() => setQuickOpen(false)}
+                          className="flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-body hover:bg-paper">
+                          <qa.icon size={15} className="text-tealdark" /> {qa.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="relative">
               <button className="flex items-center gap-2" onClick={() => setMenuOpen((m) => !m)}>
                 {user && <div className="hidden text-right sm:block"><div className="text-[13px] font-semibold leading-tight">{user.name}</div><div className="text-[11px] capitalize text-muted">{user.role.toLowerCase()}</div></div>}
