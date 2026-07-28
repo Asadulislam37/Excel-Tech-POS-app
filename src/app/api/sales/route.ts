@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
           payments: true,
         },
       });
-    });
+    }, { timeout: 30000, maxWait: 15000 });
 
     return NextResponse.json(sale, { status: 201 });
   } catch (e) {

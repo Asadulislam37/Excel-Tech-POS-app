@@ -136,7 +136,8 @@ export default function ProductsPage() {
     setErr("");
     const res = await fetch("/api/products", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, variants: variants.filter((v) => v.sku) }),
+      // Keep any variant that has a SKU or a price — blank SKUs auto-generate.
+      body: JSON.stringify({ ...form, variants: variants.filter((v) => v.sku || v.salePrice || v.mrp || v.costPrice || v.colorId || v.sizeId) }),
     });
     const data = await res.json();
     if (!res.ok) return setErr(data.error);
@@ -557,7 +558,7 @@ export default function ProductsPage() {
             </div>
             {variants.map((v, i) => (
               <div key={i} className="grid grid-cols-[1fr_1fr_1fr_75px_75px_75px_75px_auto] items-center gap-2">
-                <input className={inp} placeholder="SKU" value={v.sku} onChange={(e) => setVariants((vs) => vs.map((x, j) => j === i ? { ...x, sku: e.target.value } : x))} />
+                <input className={inp} placeholder="SKU (auto if blank)" value={v.sku} onChange={(e) => setVariants((vs) => vs.map((x, j) => j === i ? { ...x, sku: e.target.value } : x))} />
                 <select className={inp} value={v.colorId} onChange={(e) => setVariants((vs) => vs.map((x, j) => j === i ? { ...x, colorId: e.target.value } : x))}>
                   <option value="">Color…</option>{cfg.colors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>

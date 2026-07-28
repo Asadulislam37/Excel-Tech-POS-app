@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         },
         include: { customer: true },
       });
-    });
+    }, { timeout: 30000, maxWait: 15000 });
     return NextResponse.json(updated);
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Collection failed." }, { status: 400 });

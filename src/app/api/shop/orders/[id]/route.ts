@@ -145,7 +145,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       }
 
       throw new Error("Unknown action.");
-    });
+    }, { timeout: 30000, maxWait: 15000 });
     return NextResponse.json(result);
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Update failed." }, { status: 400 });
