@@ -1,4 +1,5 @@
 "use client";
+import DateInput from "@/components/DateInput";
 
 import { useCallback, useEffect, useState } from "react";
 import { taka, dt } from "@/lib/format";
@@ -60,8 +61,8 @@ export default function CashStatementPage() {
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
           </select>
         </div>
-        <div className="min-w-[130px] basis-[150px]"><input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-        <div className="min-w-[130px] basis-[150px]"><input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+        <div className="min-w-[130px] basis-[150px]"><DateInput value={from} onChange={(e) => setFrom(e.target.value)} /></div>
+        <div className="min-w-[130px] basis-[150px]"><DateInput value={to} onChange={(e) => setTo(e.target.value)} /></div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("cash-statement", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
           <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("cash-statement", HEAD, sheet())}><Download size={16} /></button>

@@ -7,6 +7,7 @@ import { exportCsv, exportExcel } from "@/lib/export";
 import { Download, Eye, FileSpreadsheet, MessageSquare, MoreHorizontal, Pencil, Printer, Trash2, Truck, X } from "lucide-react";
 import SalesTabs from "@/components/SalesTabs";
 import InvoiceView, { InvoiceSale } from "@/components/InvoiceView";
+import DateInput from "@/components/DateInput";
 
 type Named = { id: string; name: string };
 type Sale = InvoiceSale & { status: string; courierConsignmentId?: string | null; courierTracking?: string | null; courierStatus?: string | null };
@@ -185,7 +186,7 @@ export default function SalesHistory() {
             <option value="WHOLESALE">Wholesale</option>
           </select>
         </Cell>
-        <Cell><input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></Cell>
+        <Cell><DateInput value={date} onChange={(e) => setDate(e.target.value)} /></Cell>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("sold-history", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
           <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("sold-history", HEAD, sheet())}><Download size={16} /></button>

@@ -54,6 +54,44 @@ export async function postSaleReturnJournal(
   await postJournal(tx, { voucherNo, memo: `Sales return ${args.returnNo}`, refType: "SaleReturn", refId: args.returnId, lines });
 }
 
+// An exchange = a partial return (items the customer hands back) + a new sale
+// (items they take away), settled by the price difference.
+//   • returned goods: reverse revenue, restore inventory, reverse COGS
+//   • new goods:      recognise revenue, book COGS, reduce inventory
+//   • diffAmount:     + customer pays (cash in), − shop refunds (cash out)
+export async function postExchangeJournal(
+  tx: Prisma.TransactionClient,
+  args: {
+    exchangeId: string; exchangeNo: string;
+    valueIn: number; valueOut: number; costIn: number; costOut: number;
+    diffAmount: number; method?: string; date?: Date;
+  }
+) {
+  const lines: { code: string; debit?: number; credit?: number }[] = [];
+  // Returned goods (itemsIn).
+  if (args.valueIn > 0) lines.push({ code: ACC.SALES, debit: args.valueIn });
+  if (args.costIn > 0) {
+    lines.push({ code: ACC.INVENTORY, debit: args.costIn });
+    lines.push({ code: ACC.COGS, credit: args.costIn });
+  }
+  // New goods (itemsOut).
+  if (args.valueOut > 0) lines.push({ code: ACC.SALES, credit: args.valueOut });
+  if (args.costOut > 0) {
+    lines.push({ code: ACC.COGS, debit: args.costOut });
+    lines.push({ code: ACC.INVENTORY, credit: args.costOut });
+  }
+  // Settle the price difference in cash (default).
+  const asset = METHOD_ACCOUNT[args.method ?? "CASH"] ?? "1000";
+  if (args.diffAmount > 0) lines.push({ code: asset, debit: args.diffAmount });
+  else if (args.diffAmount < 0) lines.push({ code: asset, credit: -args.diffAmount });
+  if (!lines.length) return;
+  const voucherNo = await nextVoucherNo(tx, "EXC");
+  await postJournal(tx, {
+    voucherNo, memo: `Exchange ${args.exchangeNo}`, refType: "Exchange", refId: args.exchangeId,
+    ...(args.date && { date: args.date }), lines,
+  });
+}
+
 // Collecting a customer due: money comes in (asset ↑), the receivable clears (asset ↓).
 export async function postDueCollectionJournal(
   tx: Prisma.TransactionClient,

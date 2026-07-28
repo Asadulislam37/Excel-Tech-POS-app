@@ -75,7 +75,26 @@ export async function GET(req: NextRequest) {
     byVariant.set(key, row);
   }
 
-  const rows = [...byVariant.values()].sort((a, b) => b.quantity - a.quantity);
+  // Net out returns: a returned unit was never really sold, so drop its quantity,
+  // revenue (refunded amount) and cost from the rolled-up figures.
+  const saleItemIds = items.map((it) => it.id);
+  if (saleItemIds.length) {
+    const returnItems = await prisma.saleReturnItem.findMany({
+      where: { saleItemId: { in: saleItemIds } },
+      include: { saleItem: { select: { variantId: true, unitCost: true } } },
+    });
+    for (const r of returnItems) {
+      const row = byVariant.get(r.saleItem.variantId);
+      if (!row) continue;
+      row.quantity -= r.quantity;
+      row.revenue -= Number(r.amount);
+      row.cost -= Number(r.saleItem.unitCost) * r.quantity;
+    }
+  }
+
+  const rows = [...byVariant.values()]
+    .filter((r) => r.quantity !== 0 || r.revenue !== 0)
+    .sort((a, b) => b.quantity - a.quantity);
 
   return NextResponse.json({
     rows,

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { taka } from "@/lib/format";
 import { exportCsv, exportExcel } from "@/lib/export";
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
+import DateInput from "@/components/DateInput";
 
 type Row = {
   id: string; sku: string; category: string; brand: string; product: string;
@@ -59,7 +60,7 @@ export default function ProductsReport({
           <input className="input" placeholder="Type here…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="min-w-[130px] flex-1 basis-[140px] lg:max-w-[170px]">
-          <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel(title.toLowerCase().replace(/\s+/g, "-"), HEAD, sheet())}><FileSpreadsheet size={16} /></button>

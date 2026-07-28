@@ -42,6 +42,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
+  // Today's date is time/timezone dependent — rendering it during SSR (UTC on the
+  // server) vs the browser (local time) can differ near midnight and cause a
+  // hydration mismatch that kills every <Link>'s client navigation. Fill it in
+  // only after mount so the server and first client render always agree.
+  const [todayStr, setTodayStr] = useState("");
+  useEffect(() => {
+    setTodayStr(new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+  }, []);
 
   const bare = pathname.startsWith("/shop") || ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
 
@@ -169,9 +177,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <button className="lg:hidden" onClick={() => setMobileOpen(true)}>
             <Menu size={20} />
           </button>
-          <div className="text-[13px] text-muted">
-            {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </div>
+          <div className="text-[13px] text-muted" suppressHydrationWarning>{todayStr}</div>
           <div className="ml-auto flex items-center gap-3">
             <Link href="/sales/pos" className="btn btn-primary h-9">
               <ShoppingCart size={15} /> New Invoice

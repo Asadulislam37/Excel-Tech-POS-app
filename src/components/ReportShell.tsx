@@ -2,6 +2,7 @@
 
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
 import { exportCsv, exportExcel } from "@/lib/export";
+import DateInput from "@/components/DateInput";
 
 /** Shared header for the financial reports: title, date controls, export buttons. */
 export default function ReportShell({
@@ -42,6 +43,6 @@ export default function ReportShell({
 
 export const DateBox = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
   <div className="min-w-[130px] flex-1 basis-[140px] lg:max-w-[170px]">
-    <input type="date" className="input" value={value} onChange={(e) => onChange(e.target.value)} />
+    <DateInput value={value} onChange={(e) => onChange(e.target.value)} />
   </div>
 );

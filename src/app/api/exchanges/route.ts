@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { postExchangeJournal } from "@/lib/sale-journal";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,8 @@ export async function POST(req: NextRequest) {
       const valueIn = itemsIn.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
       const valueOut = itemsOut.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
       const diffAmount = valueOut - valueIn; // + customer pays, − shop refunds
+      let costIn = 0;  // cost of goods coming back into stock
+      let costOut = 0; // cost of goods leaving stock
 
       const ymd = new Date().toISOString().slice(2, 10).replace(/-/g, "");
       const count = await tx.exchange.count({ where: { createdAt: { gte: new Date(new Date().toDateString()) } } });
@@ -76,6 +79,8 @@ export async function POST(req: NextRequest) {
         const variant = await tx.productVariant.findUniqueOrThrow({
           where: { id: line.variantId }, include: { product: true },
         });
+        const lineCost = Number(variant.costPrice) * line.quantity;
+        if (direction === "IN") costIn += lineCost; else costOut += lineCost;
 
         if (direction === "OUT" && variant.product.type === "SERIALIZED") {
           const nos = line.serialNos ?? [];
@@ -127,6 +132,12 @@ export async function POST(req: NextRequest) {
       for (const l of itemsOut) await move(l, "OUT");
 
       await tx.sale.update({ where: { id: saleId }, data: { status: "EXCHANGED" } });
+
+      // Accounting: reverse the returned goods, book the new goods, settle the difference.
+      await postExchangeJournal(tx, {
+        exchangeId: exchange.id, exchangeNo,
+        valueIn, valueOut, costIn, costOut, diffAmount,
+      });
 
       return tx.exchange.findUniqueOrThrow({
         where: { id: exchange.id },

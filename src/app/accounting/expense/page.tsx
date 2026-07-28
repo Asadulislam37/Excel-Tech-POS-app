@@ -1,4 +1,5 @@
 "use client";
+import DateInput from "@/components/DateInput";
 
 import { useCallback, useEffect, useState } from "react";
 import { taka, dt } from "@/lib/format";
@@ -73,10 +74,10 @@ export default function ExpenseVoucherPage() {
           <Plus size={15} /> New Voucher
         </button>
         <div className="min-w-[130px] flex-1 basis-[140px] lg:max-w-[170px]">
-          <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className="min-w-[130px] flex-1 basis-[140px] lg:max-w-[170px]">
-          <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("expenses", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
@@ -131,7 +132,7 @@ export default function ExpenseVoucherPage() {
               </label>
             </div>
             <label className="block text-[12px] font-semibold text-muted">Date
-              <input type="date" className="input mt-1" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <DateInput className="input mt-1" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
             </label>
             <label className="block text-[12px] font-semibold text-muted">Note
               <input className="input mt-1" placeholder="What was this for?" value={form.memo} onChange={(e) => setForm({ ...form, memo: e.target.value })} />

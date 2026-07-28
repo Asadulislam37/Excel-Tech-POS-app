@@ -49,9 +49,18 @@ export default function SerialTrack() {
             <span className="serial-chip text-[14px]">{trace.serialNo}</span>
             <span className={`rounded-md px-2.5 py-1 text-[12px] font-bold ${STATUS_STYLE[trace.status] ?? "bg-paper"}`}>{trace.status.replace(/_/g, " ")}</span>
           </div>
-          <div className="mt-3 text-[15px] font-bold">{trace.variant.product.name}</div>
-          <div className="text-[13px] text-muted">
-            {[trace.variant.color?.name, trace.variant.size?.name].filter(Boolean).join(" · ")} · SKU {trace.variant.sku}
+          <div className="mt-3 flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[15px] font-bold">{trace.variant.product.name}</div>
+              <div className="text-[13px] text-muted">
+                {[trace.variant.color?.name, trace.variant.size?.name].filter(Boolean).join(" · ")} · SKU {trace.variant.sku}
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <div className="text-[11px] font-semibold uppercase text-muted">{trace.saleItem ? "Sold for" : "Price"}</div>
+              <div className="text-[17px] font-bold text-tealdark">{taka(trace.saleItem?.unitPrice ?? trace.variant.salePrice)}</div>
+              {trace.costPrice != null && <div className="text-[11px] text-muted">Cost {taka(trace.costPrice)}</div>}
+            </div>
           </div>
 
           <div className="mt-4 space-y-3 border-t border-line pt-4 text-[13px]">

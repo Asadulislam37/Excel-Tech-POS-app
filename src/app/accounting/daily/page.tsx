@@ -1,4 +1,5 @@
 "use client";
+import DateInput from "@/components/DateInput";
 
 import { useCallback, useEffect, useState } from "react";
 import { taka } from "@/lib/format";
@@ -37,10 +38,10 @@ export default function DailyStatementPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-[130px] flex-1 basis-[140px] lg:max-w-[170px]">
-          <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className="min-w-[130px] flex-1 basis-[140px] lg:max-w-[170px]">
-          <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <button className="btn btn-ghost px-3 shrink-0" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
       </div>

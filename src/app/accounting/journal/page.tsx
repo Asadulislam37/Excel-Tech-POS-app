@@ -1,4 +1,5 @@
 "use client";
+import DateInput from "@/components/DateInput";
 
 import { useCallback, useEffect, useState } from "react";
 import { taka, dt } from "@/lib/format";
@@ -66,7 +67,7 @@ export default function ManageJournalPage() {
       <div className="flex flex-wrap items-center gap-2">
         <button className="btn text-white" style={{ background: "var(--amber)" }} onClick={() => setShow(true)}><Plus size={15} /> Create</button>
         <div className="min-w-[160px] flex-1 basis-[200px]"><input className="input" placeholder="Type here…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <div className="min-w-[130px] basis-[150px]"><input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+        <div className="min-w-[130px] basis-[150px]"><DateInput value={date} onChange={(e) => setDate(e.target.value)} /></div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("journal", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
           <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("journal", HEAD, sheet())}><Download size={16} /></button>
@@ -130,7 +131,7 @@ export default function ManageJournalPage() {
           <div className="card max-h-[90vh] w-full max-w-2xl space-y-3 overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between"><h3 className="text-lg font-bold">New Journal Voucher</h3><button onClick={() => setShow(false)}><X size={17} /></button></div>
             <div className="grid grid-cols-2 gap-2">
-              <label className="block text-[12px] font-semibold text-muted">Date<input type="date" className="input mt-1" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} /></label>
+              <label className="block text-[12px] font-semibold text-muted">Date<DateInput className="input mt-1" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} /></label>
               <label className="block text-[12px] font-semibold text-muted">Memo<input className="input mt-1" placeholder="What is this for?" value={memo} onChange={(e) => setMemo(e.target.value)} /></label>
             </div>
             <div className="grid grid-cols-[1fr_100px_100px_32px] gap-2 text-[11px] font-semibold uppercase text-muted"><span>Account</span><span className="text-right">Debit</span><span className="text-right">Credit</span><span /></div>

@@ -1,4 +1,5 @@
 "use client";
+import DateInput from "@/components/DateInput";
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -64,7 +65,7 @@ export default function PurchaseHistoryPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-[160px] flex-1 basis-[200px] lg:max-w-none"><input className="input" placeholder="Type here…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <div className="min-w-[130px] basis-[150px]"><input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+        <div className="min-w-[130px] basis-[150px]"><DateInput value={date} onChange={(e) => setDate(e.target.value)} /></div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("purchase-history", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
           <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("purchase-history", HEAD, sheet())}><Download size={16} /></button>
