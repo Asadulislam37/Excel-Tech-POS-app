@@ -62,7 +62,10 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
               <input type="email" className="input mt-1" placeholder="you@example.com" value={email}
                 onChange={(e) => setEmail(e.target.value)} autoFocus={isLogin} autoComplete="email" />
             </label>
-            <label className="block text-[12px] font-semibold text-muted">Password
+            <label className="block text-[12px] font-semibold text-muted">
+              <span className="flex items-center justify-between">Password
+                {isLogin && <Link href="/forgot-password" className="text-[11px] font-semibold text-tealdark">Forgot password?</Link>}
+              </span>
               <div className="relative mt-1">
                 <input type={show ? "text" : "password"} className="input pr-10" placeholder={isLogin ? "Your password" : "At least 6 characters"}
                   value={password} onChange={(e) => setPassword(e.target.value)}

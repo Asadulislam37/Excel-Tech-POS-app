@@ -30,7 +30,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const bare = pathname.startsWith("/shop") || pathname === "/login" || pathname === "/signup";
+  const bare = pathname.startsWith("/shop") || ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
 
   useEffect(() => {
     if (bare) return;
