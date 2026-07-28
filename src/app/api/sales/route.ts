@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { currentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,8 @@ export async function GET(req: NextRequest) {
       include: {
         customer: true,
         outlet: { select: { name: true } },
-        items: { include: { variant: { include: { product: true } }, serialUnits: true } },
+        soldBy: { select: { name: true } },
+        items: { include: { variant: { include: { product: { include: { warrantyPolicy: true } }, color: true, size: true } }, serialUnits: true } },
         payments: true,
       },
       orderBy: { createdAt: "desc" },
@@ -141,7 +143,7 @@ export async function POST(req: NextRequest) {
           invoiceNo,
           customerId: customerId || undefined,
           outletId: outlet.id,
-          soldById: soldById || undefined,
+          soldById: soldById || (await currentUser())?.uid || undefined,
           saleType,
           workOrder: workOrder || undefined,
           note: note || undefined,

@@ -1,6 +1,6 @@
 "use client";
 
-import { taka, dt } from "@/lib/format";
+import { dt } from "@/lib/format";
 import { takaInWords } from "@/lib/words";
 import { Download, Printer, X } from "lucide-react";
 
@@ -28,6 +28,12 @@ export const TERMS = [
   "2 years of service warranty (for both new and used phones; parts cost not included).",
 ];
 
+// Plain numbers, two decimals, no currency symbol — matches the printed invoice.
+const fmt = (n: number | string) => Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const qtyFmt = (n: number) => Number(n).toFixed(3);
+const methodLabel = (m: string) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase().replace(/_/g, " ");
+const inWords = (n: number | string) => takaInWords(n).replace(/\.$/, "");
+
 const rowsHtml = (s: InvoiceSale) =>
   s.items.map((i, k) => {
     const variant = [i.variant.color?.name, i.variant.size?.name].filter(Boolean).join(" ");
@@ -37,77 +43,88 @@ const rowsHtml = (s: InvoiceSale) =>
       <td>${i.variant.product.name}${variant ? ` - ${variant}` : ""}${
         i.serialUnits.length ? `<div class="ser">${i.serialUnits.map((u) => u.serialNo).join(", ")}</div>` : ""
       }</td>
-      <td class="c">${i.variant.product.warrantyPolicy?.name ?? "--"}</td>
-      <td class="c">${i.quantity}</td>
-      <td class="r">${Number(i.unitPrice).toLocaleString()}</td>
-      <td class="r">${Number(i.lineTotal).toLocaleString()}</td>
+      <td class="c">${i.variant.product.warrantyPolicy?.name ?? ""}</td>
+      <td class="r">${fmt(i.unitPrice)}</td>
+      <td class="c">${qtyFmt(i.quantity)}</td>
+      <td class="r">${fmt(i.lineTotal)}</td>
     </tr>`;
   }).join("");
 
 const totalsRows = (s: InvoiceSale) => {
   const qty = s.items.reduce((t, i) => t + i.quantity, 0);
-  const paidLines = s.payments.map((p) => `<div><span>${p.method}</span><b>${Number(p.amount).toLocaleString()}</b></div>`).join("");
-  return `
-    <div><span>Total Quantity</span><b>${qty}</b></div>
-    <div><span>Sub Total</span><b>${Number(s.subTotal).toLocaleString()}</b></div>
-    ${Number(s.discount) ? `<div><span>Discount</span><b>-${Number(s.discount).toLocaleString()}</b></div>` : ""}
-    ${Number(s.additionalExpense) ? `<div><span>Additional Expense</span><b>${Number(s.additionalExpense).toLocaleString()}</b></div>` : ""}
-    ${Number(s.vat) ? `<div><span>VAT</span><b>${Number(s.vat).toLocaleString()}</b></div>` : ""}
-    <div><span>Payable Amount</span><b>${Number(s.grandTotal).toLocaleString()}</b></div>
-    ${paidLines}
-    ${Number(s.dueTotal) ? `<div class="due"><span>Due</span><b>${Number(s.dueTotal).toLocaleString()}</b></div>` : ""}`;
+  const rows = [`<tr><td class="lbl">Sub Total</td><td class="c">${qtyFmt(qty)}</td><td class="r">${fmt(s.subTotal)}</td></tr>`];
+  if (Number(s.discount)) rows.push(`<tr><td class="lbl">Discount</td><td></td><td class="r">-${fmt(s.discount)}</td></tr>`);
+  if (Number(s.additionalExpense)) rows.push(`<tr><td class="lbl">Additional Expense</td><td></td><td class="r">${fmt(s.additionalExpense)}</td></tr>`);
+  if (Number(s.vat)) rows.push(`<tr><td class="lbl">VAT</td><td></td><td class="r">${fmt(s.vat)}</td></tr>`);
+  rows.push(`<tr><td class="lbl">Payable Amount</td><td></td><td class="r">${fmt(s.grandTotal)}</td></tr>`);
+  for (const p of s.payments) rows.push(`<tr><td class="lbl">${methodLabel(p.method)}</td><td></td><td class="r">${fmt(p.amount)}</td></tr>`);
+  if (Number(s.dueTotal)) rows.push(`<tr><td class="lbl">Due</td><td></td><td class="r">${fmt(s.dueTotal)}</td></tr>`);
+  return rows.join("");
 };
 
-/** Full A4 invoice document. */
+/** Full A4 invoice document — plain black-and-white, letterhead space on top. */
 export function a4Html(s: InvoiceSale) {
+  const date = new Date(s.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   return `<html><head><meta charset="utf-8"><title>${s.invoiceNo}</title><style>
     *{box-sizing:border-box}
-    body{font-family:"Segoe UI",sans-serif;color:#111;padding:28px;margin:0}
-    .title{background:#e6f2ee;text-align:center;font-size:20px;font-weight:700;padding:9px;border-bottom:3px solid #0d7a72}
-    .head{display:flex;justify-content:space-between;margin-top:14px;font-size:13px;line-height:1.9}
-    .head b{font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
-    th{background:#fdf6ec;border:1px solid #e6ddd2;padding:8px;font-weight:700}
-    td{border:1px solid #e6ddd2;padding:8px}
+    body{font-family:"Segoe UI",Arial,sans-serif;color:#000;margin:0}
+    .page{padding:32px 44px}
+    .letterhead{height:150px}
+    hr{border:none;border-top:1px solid #333;margin:0}
+    .titlebar{display:flex;justify-content:space-between;align-items:center;padding:12px 2px}
+    .titlebar .side{font-size:13px;min-width:170px}
+    .titlebar .side.r{text-align:right}
+    .titlebar h1{font-size:23px;font-weight:700;letter-spacing:1px;margin:0}
+    .cust{margin:16px 2px;font-size:13px;line-height:2.2}
+    .cust b{font-weight:700}
+    table.items{width:100%;border-collapse:collapse;font-size:13px}
+    table.items th,table.items td{border:1px solid #333;padding:7px 8px;vertical-align:top}
+    table.items th{background:#f2f2f2;text-align:center;font-weight:700}
     .c{text-align:center}.r{text-align:right}.mono{font-family:monospace;font-size:12px}
-    .ser{font-family:monospace;font-size:11px;color:#666;margin-top:3px}
-    .below{display:flex;justify-content:space-between;gap:24px;margin-top:14px;font-size:13px}
-    .totals{background:#fdf6ec;border-radius:8px;padding:12px 16px;min-width:270px}
-    .totals div{display:flex;justify-content:space-between;gap:28px;padding:2px 0}
-    .totals .due{color:#b45309}
-    .terms{border:1px solid #e3e8ee;border-radius:8px;padding:12px 16px;margin-top:18px;font-size:12.5px;line-height:1.9}
-    .terms h4{margin:0 0 6px;font-size:13.5px}
-    .by{margin-top:18px;font-size:13px}
-    @media print{body{padding:0}}
-  </style></head><body>
-    <div class="title">Invoice</div>
-    <div class="head">
-      <div>
-        <div>Customer Name &nbsp;: <b>${s.customer?.name ?? "Walk-in"}</b></div>
-        <div>Phone &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <b>${s.customer?.phone ?? "--"}</b></div>
-        <div>Address &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${s.customer?.address ?? "--"}</div>
-        ${s.workOrder ? `<div>Work Order &nbsp;&nbsp;&nbsp;: ${s.workOrder}</div>` : ""}
-      </div>
-      <div style="text-align:right">
-        <div>Invoice No &nbsp;: <b>${s.invoiceNo}</b></div>
-        <div>Date &amp; Time &nbsp;: ${new Date(s.createdAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</div>
-        <div>Outlet &nbsp;: ${s.outlet?.name ?? "Excel Tech"}</div>
-      </div>
+    .ser{font-family:monospace;font-size:11px;color:#555;margin-top:3px}
+    .below{display:flex;justify-content:space-between;align-items:flex-start;font-size:13px}
+    .words{padding:8px 2px}.words b{font-weight:700}
+    table.tot{border-collapse:collapse;font-size:13px}
+    table.tot td{border:1px solid #333;padding:6px 14px}
+    table.tot .lbl{font-weight:700;text-align:center}
+    table.tot .c{text-align:center;font-weight:700}
+    table.tot .r{text-align:right;font-weight:700;min-width:90px}
+    .by{text-align:right;margin-top:10px;font-size:13px;line-height:1.8}
+    .by b{font-weight:700}
+    .terms{margin-top:40px;font-size:12.5px;line-height:1.85}
+    .terms h4{margin:0 0 4px;font-weight:700;font-size:13px}
+    @media print{.page{padding:0 10mm}}
+  </style></head><body><div class="page">
+    <div class="letterhead"></div>
+    <hr>
+    <div class="titlebar">
+      <div class="side">${s.invoiceNo}</div>
+      <h1>INVOICE</h1>
+      <div class="side r">${date}</div>
     </div>
-    <table>
-      <thead><tr><th>Sl No.</th><th>SKU</th><th>Product Name</th><th>Warranty</th><th>Quantity</th><th>Unit Price</th><th>Total</th></tr></thead>
+    <hr>
+    <div class="cust">
+      <div><b>Customer Name :</b> ${s.customer?.name ?? "Walk-in"}</div>
+      <div><b>Phone No. :</b> ${s.customer?.phone ?? "--"}</div>
+      <div><b>Address :</b> ${s.customer?.address ?? "--"}</div>
+      ${s.workOrder ? `<div><b>Work Order :</b> ${s.workOrder}</div>` : ""}
+    </div>
+    <table class="items">
+      <thead><tr><th>SL No</th><th>SKU</th><th>Product Name</th><th>Warranty</th><th>Unit Price</th><th>QTY</th><th>Price</th></tr></thead>
       <tbody>${rowsHtml(s)}</tbody>
     </table>
     <div class="below">
-      <div>
-        <div>In words : ${takaInWords(s.grandTotal)}</div>
+      <div class="words">
+        <div><b>In Words :</b> ${inWords(s.grandTotal)}</div>
         ${s.note ? `<div>Remarks: ${s.note}</div>` : ""}
       </div>
-      <div class="totals">${totalsRows(s)}</div>
+      <table class="tot">${totalsRows(s)}</table>
     </div>
-    <div class="terms"><h4>Terms &amp; Conditions</h4>${TERMS.map((t) => `<div>• ${t}</div>`).join("")}</div>
-    <div class="by">Prepared by : ${s.soldBy?.name ?? "Excel Tech"}</div>
-  </body></html>`;
+    <div class="by">
+      <div><b>Created By:</b> ${s.soldBy?.name ?? "Excel Tech"}</div>
+    </div>
+    <div class="terms"><h4>Terms &amp; Conditions:</h4>${TERMS.map((t) => `<div>• ${t}</div>`).join("")}</div>
+  </div></body></html>`;
 }
 
 /** Narrow thermal-printer receipt (80mm). */
@@ -177,75 +194,75 @@ export default function InvoiceView({ sale, onClose }: { sale: InvoiceSale; onCl
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
-        <div className="card max-h-[76vh] overflow-y-auto p-6">
+        <div className="card max-h-[76vh] overflow-y-auto bg-white p-6 text-black">
           <div className="flex justify-end"><button onClick={onClose}><X size={18} /></button></div>
 
-          <div className="rounded bg-tealsoft py-2 text-center text-lg font-bold" style={{ borderBottom: "3px solid var(--teal)" }}>Invoice</div>
+          <div className="mt-8 border-t border-neutral-700" />
+          <div className="flex items-center justify-between py-3">
+            <div className="min-w-[150px] text-[13px]">{sale.invoiceNo}</div>
+            <h2 className="text-xl font-bold tracking-wide">INVOICE</h2>
+            <div className="min-w-[150px] text-right text-[13px]">{dt(sale.createdAt)}</div>
+          </div>
+          <div className="border-t border-neutral-700" />
 
-          <div className="mt-3 flex flex-wrap justify-between gap-4 text-[13px] leading-7">
-            <div>
-              <div>Customer Name : <b>{sale.customer?.name ?? "Walk-in"}</b></div>
-              <div>Phone : <b>{sale.customer?.phone ?? "--"}</b></div>
-              <div>Address : {sale.customer?.address ?? "--"}</div>
-              {sale.workOrder && <div>Work Order : {sale.workOrder}</div>}
-            </div>
-            <div className="text-right">
-              <div>Invoice No : <b>{sale.invoiceNo}</b></div>
-              <div>Date &amp; Time : {dt(sale.createdAt)}</div>
-              <div>Outlet : {sale.outlet?.name ?? "Excel Tech"}</div>
-            </div>
+          <div className="mt-4 text-[13px] leading-8">
+            <div><b>Customer Name :</b> {sale.customer?.name ?? "Walk-in"}</div>
+            <div><b>Phone No. :</b> {sale.customer?.phone ?? "--"}</div>
+            <div><b>Address :</b> {sale.customer?.address ?? "--"}</div>
+            {sale.workOrder && <div><b>Work Order :</b> {sale.workOrder}</div>}
           </div>
 
-          <table className="mt-4 w-full text-[13px]">
-            <thead><tr>
-              <th className="th text-center">Sl No.</th><th className="th">SKU</th><th className="th">Product Name</th>
-              <th className="th text-center">Warranty</th><th className="th text-center">Quantity</th>
-              <th className="th text-right">Unit Price</th><th className="th text-right">Total</th>
+          <table className="mt-3 w-full border-collapse text-[13px]">
+            <thead><tr className="bg-neutral-100">
+              {["SL No", "SKU", "Product Name", "Warranty", "Unit Price", "QTY", "Price"].map((h) => (
+                <th key={h} className="border border-neutral-700 px-2 py-1.5 text-center font-bold">{h}</th>
+              ))}
             </tr></thead>
             <tbody>
               {sale.items.map((i, k) => (
                 <tr key={k}>
-                  <td className="td text-center">{k + 1}</td>
-                  <td className="td font-mono text-[12px]">{i.variant.sku}</td>
-                  <td className="td">{i.variant.product.name}
-                    {i.serialUnits.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {i.serialUnits.map((u) => <span key={u.serialNo} className="serial-chip">{u.serialNo}</span>)}
-                      </div>
-                    )}
+                  <td className="border border-neutral-700 px-2 py-1.5 text-center">{k + 1}</td>
+                  <td className="border border-neutral-700 px-2 py-1.5 text-center font-mono text-[12px]">{i.variant.sku}</td>
+                  <td className="border border-neutral-700 px-2 py-1.5">{i.variant.product.name}
+                    {i.serialUnits.length > 0 && <div className="mt-1 font-mono text-[11px] text-neutral-500">{i.serialUnits.map((u) => u.serialNo).join(", ")}</div>}
                   </td>
-                  <td className="td text-center">{i.variant.product.warrantyPolicy?.name ?? "--"}</td>
-                  <td className="td text-center">{i.quantity}</td>
-                  <td className="td text-right">{taka(i.unitPrice)}</td>
-                  <td className="td text-right font-semibold">{taka(i.lineTotal)}</td>
+                  <td className="border border-neutral-700 px-2 py-1.5 text-center">{i.variant.product.warrantyPolicy?.name ?? ""}</td>
+                  <td className="border border-neutral-700 px-2 py-1.5 text-right">{fmt(i.unitPrice)}</td>
+                  <td className="border border-neutral-700 px-2 py-1.5 text-center">{qtyFmt(i.quantity)}</td>
+                  <td className="border border-neutral-700 px-2 py-1.5 text-right">{fmt(i.lineTotal)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div className="mt-4 flex flex-wrap justify-between gap-4 text-[13px]">
-            <div className="max-w-sm">
-              <div>In words : {takaInWords(sale.grandTotal)}</div>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="pt-2 text-[13px]">
+              <div><b>In Words :</b> {inWords(sale.grandTotal)}</div>
               {sale.note && <div>Remarks: {sale.note}</div>}
             </div>
-            <div className="min-w-[250px] rounded-lg bg-ambersoft px-4 py-3">
-              <div className="flex justify-between"><span>Total Quantity</span><b>{qty}</b></div>
-              <div className="flex justify-between"><span>Sub Total</span><b>{taka(sale.subTotal)}</b></div>
-              {Number(sale.discount) > 0 && <div className="flex justify-between"><span>Discount</span><b>−{taka(sale.discount)}</b></div>}
-              {Number(sale.additionalExpense) > 0 && <div className="flex justify-between"><span>Additional Expense</span><b>{taka(sale.additionalExpense)}</b></div>}
-              {Number(sale.vat) > 0 && <div className="flex justify-between"><span>VAT</span><b>{taka(sale.vat)}</b></div>}
-              <div className="flex justify-between"><span>Payable Amount</span><b>{taka(sale.grandTotal)}</b></div>
-              {sale.payments.map((p, k) => <div key={k} className="flex justify-between"><span>{p.method}</span><b>{taka(p.amount)}</b></div>)}
-              {Number(sale.dueTotal) > 0 && <div className="flex justify-between text-amber"><span>Due</span><b>{taka(sale.dueTotal)}</b></div>}
-            </div>
+            <table className="border-collapse text-[13px]">
+              <tbody>
+                <tr>
+                  <td className="border border-neutral-700 px-3 py-1.5 text-center font-bold">Sub Total</td>
+                  <td className="border border-neutral-700 px-3 py-1.5 text-center font-bold">{qtyFmt(qty)}</td>
+                  <td className="border border-neutral-700 px-3 py-1.5 text-right font-bold">{fmt(sale.subTotal)}</td>
+                </tr>
+                {Number(sale.discount) > 0 && <TotRow label="Discount" value={`-${fmt(sale.discount)}`} />}
+                {Number(sale.additionalExpense) > 0 && <TotRow label="Additional Expense" value={fmt(sale.additionalExpense)} />}
+                {Number(sale.vat) > 0 && <TotRow label="VAT" value={fmt(sale.vat)} />}
+                <TotRow label="Payable Amount" value={fmt(sale.grandTotal)} />
+                {sale.payments.map((p, k) => <TotRow key={k} label={p.method.charAt(0) + p.method.slice(1).toLowerCase().replace(/_/g, " ")} value={fmt(p.amount)} />)}
+                {Number(sale.dueTotal) > 0 && <TotRow label="Due" value={fmt(sale.dueTotal)} />}
+              </tbody>
+            </table>
           </div>
 
-          <div className="mt-4 rounded-lg border border-line p-4 text-[12.5px] leading-7">
-            <h4 className="font-bold">Terms &amp; Conditions</h4>
+          <div className="mt-2 text-right text-[13px]"><b>Created By:</b> {sale.soldBy?.name ?? "Excel Tech"}</div>
+
+          <div className="mt-8 text-[12.5px] leading-7">
+            <h4 className="font-bold">Terms &amp; Conditions:</h4>
             {TERMS.map((t, k) => <div key={k}>• {t}</div>)}
           </div>
-
-          <div className="mt-4 text-[13px]">Prepared by : {sale.soldBy?.name ?? "Excel Tech"}</div>
         </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-3">
@@ -261,5 +278,15 @@ export default function InvoiceView({ sale, onClose }: { sale: InvoiceSale; onCl
         </div>
       </div>
     </div>
+  );
+}
+
+function TotRow({ label, value }: { label: string; value: string }) {
+  return (
+    <tr>
+      <td className="border border-neutral-700 px-3 py-1.5 text-center font-bold">{label}</td>
+      <td className="border border-neutral-700 px-3 py-1.5" />
+      <td className="border border-neutral-700 px-3 py-1.5 text-right font-bold">{value}</td>
+    </tr>
   );
 }
