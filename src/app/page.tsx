@@ -52,15 +52,15 @@ export default function Dashboard() {
         {/* Today's Cash Flow */}
         <div className="card space-y-3 p-4">
           <h2 className="border-l-4 pl-2 font-bold" style={{ borderColor: "var(--teal)" }}>Today&apos;s Cash Flow</h2>
-          <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#dbeafe" }}>
+          <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#dbeafe", color: "#111827" }}>
             <div><div className="text-[13px] font-semibold">Cash In</div><div className="text-2xl font-bold">{taka(d.cashIn)}</div></div>
             <ArrowDownLeft size={22} className="text-blue-700" />
           </div>
-          <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#dcfce7" }}>
+          <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#dcfce7", color: "#111827" }}>
             <div><div className="text-[13px] font-semibold">Cash Out</div><div className="text-2xl font-bold">{taka(d.cashOut)}</div></div>
             <ArrowUpRight size={22} className="text-green-700" />
           </div>
-          <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#fee2e2" }}>
+          <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#fee2e2", color: "#111827" }}>
             <div><div className="text-[13px] font-semibold">Balance</div><div className="text-2xl font-bold">{taka(d.balance)}</div></div>
             <Wallet size={22} className="text-red-700" />
           </div>
@@ -71,17 +71,17 @@ export default function Dashboard() {
           <div className="card space-y-3 p-4">
             <h2 className="border-l-4 pl-2 font-bold" style={{ borderColor: "var(--teal)" }}>Today&apos;s Summary</h2>
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#dbeafe" }}>
+              <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#dbeafe", color: "#111827" }}>
                 <div><div className="text-[13px] font-semibold">Retail Sale</div><div className="text-2xl font-bold">{taka(d.todayTotal)}</div>
                   <div className="text-[11px] text-muted">{d.todaySales} invoices</div></div>
                 <ReceiptText size={20} className="text-blue-700" />
               </div>
-              <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#f3e8ff" }}>
+              <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#f3e8ff", color: "#111827" }}>
                 <div><div className="text-[13px] font-semibold">Collected</div><div className="text-2xl font-bold">{taka(d.todayCollected)}</div>
                   <div className="text-[11px] text-muted">incl. due collection</div></div>
                 <Package size={20} className="text-purple-700" />
               </div>
-              <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#fee2e2" }}>
+              <div className="flex items-center justify-between rounded-xl p-4" style={{ background: "#fee2e2", color: "#111827" }}>
                 <div><div className="text-[13px] font-semibold">Total Due</div><div className="text-2xl font-bold">{taka(d.totalDue)}</div>
                   <div className="text-[11px] text-muted">all customers</div></div>
                 <TrendingDown size={20} className="text-red-700" />

@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 // POST /api/steadfast  { saleId, note? } → create a Steadfast parcel for the invoice
 export async function POST(req: NextRequest) {
   if (!isConfigured()) return NextResponse.json({ error: "Steadfast keys not configured." }, { status: 400 });
-  const { saleId, note } = await req.json();
+  const { saleId, note, deliveryCharge = 0 } = await req.json();
 
   const sale = await prisma.sale.findUnique({
     where: { id: saleId },
@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
       recipient_name: sale.customer.name.slice(0, 100),
       recipient_phone: phone,
       recipient_address: sale.customer.address.slice(0, 250),
-      // Collect the outstanding due on delivery (0 if already fully paid).
-      cod_amount: Number(sale.dueTotal),
+      // Collect the outstanding due + delivery charge on delivery.
+      cod_amount: Number(sale.dueTotal) + (Number(deliveryCharge) || 0),
       note: note || undefined,
       item_description: items,
     });

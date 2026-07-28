@@ -26,12 +26,22 @@ export default function SalesHistory() {
   const [cfg, setCfg] = useState<{ outlets: Named[] } | null>(null);
   const [view, setView] = useState<Sale | null>(null);
   const [menuFor, setMenuFor] = useState("");
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  // Open the row menu at a fixed viewport position so it never shifts the table.
+  const openMenu = (e: React.MouseEvent, id: string) => {
+    if (menuFor === id) { setMenuFor(""); return; }
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setMenuPos({ top: r.bottom + 4, left: Math.max(8, r.right - 176) });
+    setMenuFor(id);
+  };
   const [confirmDel, setConfirmDel] = useState<Sale | null>(null);
   const [sms, setSms] = useState<Sale | null>(null);
   const [smsText, setSmsText] = useState("");
   const [courier, setCourier] = useState<Sale | null>(null);
   const [courierNote, setCourierNote] = useState("");
   const [courierMsg, setCourierMsg] = useState("");
+  const [deliveryCharge, setDeliveryCharge] = useState(80); // Inside Dhaka default
   const [busy, setBusy] = useState(false);
   const router = useRouter();
 
@@ -39,7 +49,7 @@ export default function SalesHistory() {
     if (!courier) return;
     setBusy(true); setCourierMsg("");
     try {
-      const res = await fetch("/api/steadfast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saleId: courier.id, note: courierNote }) });
+      const res = await fetch("/api/steadfast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saleId: courier.id, note: courierNote, deliveryCharge }) });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       setCourier(null); setCourierNote(""); load();
@@ -196,11 +206,13 @@ export default function SalesHistory() {
                 <td className="td text-right font-semibold">{taka(s.grandTotal)}
                   {Number(s.dueTotal) > 0 && <div className="text-[11px] font-bold text-amber">due {taka(s.dueTotal)}</div>}</td>
                 <td className="td">
-                  <div className="relative flex items-center justify-center gap-1.5">
+                  <div className="flex items-center justify-center gap-1.5">
                     <button title="View invoice" className="rounded-md bg-orange-100 p-2 text-orange-600 hover:bg-orange-200" onClick={() => setView(s)}><Eye size={14} /></button>
-                    <button title="More" className="rounded-md bg-paper p-2 text-body hover:bg-line" onClick={() => setMenuFor(menuFor === s.id ? "" : s.id)}><MoreHorizontal size={14} /></button>
+                    <button title="More" className="rounded-md bg-paper p-2 text-body hover:bg-line" onClick={(e) => openMenu(e, s.id)}><MoreHorizontal size={14} /></button>
                     {menuFor === s.id && (
-                      <div className="card absolute right-0 top-9 z-40 w-40 p-1 text-left shadow-lg">
+                      <>
+                      <div className="fixed inset-0 z-40" onClick={() => setMenuFor("")} />
+                      <div className="card fixed z-50 w-44 p-1 text-left shadow-lg" style={{ top: menuPos.top, left: menuPos.left }}>
                         <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold hover:bg-paper"
                           onClick={() => { setMenuFor(""); router.push(`/sales/pos?edit=${s.id}`); }}>
                           <Pencil size={13} /> Edit
@@ -225,6 +237,7 @@ export default function SalesHistory() {
                           <Trash2 size={13} /> Delete
                         </button>
                       </div>
+                      </>
                     )}
                   </div>
                 </td>
@@ -284,11 +297,25 @@ export default function SalesHistory() {
               <Info label="COD (due)" value={taka(courier.dueTotal)} />
             </div>
             <div className="rounded-lg bg-paper px-3 py-2 text-[12px]"><span className="text-muted">Address:</span> {courier.customer?.address ?? "— (required)"}</div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-[12px] font-semibold text-muted">Delivery Zone
+                <select className="input mt-1" value={deliveryCharge === 80 ? "80" : deliveryCharge === 120 ? "120" : "custom"}
+                  onChange={(e) => { if (e.target.value !== "custom") setDeliveryCharge(Number(e.target.value)); }}>
+                  <option value="80">Inside Dhaka — ৳80</option>
+                  <option value="120">Outside Dhaka — ৳120</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              <label className="block text-[12px] font-semibold text-muted">Delivery Charge
+                <input type="number" min={0} className="input mt-1" value={deliveryCharge} onChange={(e) => setDeliveryCharge(Number(e.target.value) || 0)} />
+              </label>
+            </div>
             <label className="block text-[12px] font-semibold text-muted">Delivery note (optional)
               <input className="input mt-1" placeholder="e.g. Call before delivery" value={courierNote} onChange={(e) => setCourierNote(e.target.value)} />
             </label>
             <div className="rounded-md bg-ambersoft px-3 py-2 text-[12px] font-semibold text-amber">
-              Steadfast will collect <b>{taka(courier.dueTotal)}</b> as Cash-on-Delivery. Phone must be 11 digits and address is required.
+              Steadfast will collect <b>{taka(Number(courier.dueTotal) + deliveryCharge)}</b> COD
+              (product due {taka(courier.dueTotal)} + delivery {taka(deliveryCharge)}). Phone must be 11 digits, address required.
             </div>
             {courierMsg && <div className="rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{courierMsg}</div>}
             <button className="btn btn-primary w-full py-3" disabled={busy} onClick={sendToCourier}>{busy ? "Creating parcel…" : "Create Parcel"}</button>
