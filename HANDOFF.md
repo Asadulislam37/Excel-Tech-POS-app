@@ -86,11 +86,10 @@ Everything compiles; nothing is mid-edit. Last commit deployed successfully.
 1. ✅ **RESOLVED — P&L missing 2 old sales:** CS-260728-0001 and -0002 were backfilled with sale
    journals (vouchers SAL-BF-0001/0002, dated to the original sale date). Trial balance reconciles
    (৳449,000 = ৳449,000). These were the only two unposted sales in the DB.
-2. ⚠️ **Exchanges don't post accounting journals** — same class of bug just fixed for sales returns.
-   `api/exchanges/route.ts` reverses/adds stock but never calls postJournal, so an exchange's revenue/
-   COGS delta and any diffAmount don't hit the P&L / Trial Balance. Needs a reversing+re-posting
-   journal like `postSaleReturnJournal`/`postSaleJournal`. (Sales returns, due collection, purchase
-   returns all post correctly now.)
+2. ✅ **RESOLVED — Exchanges now post journals** (`postExchangeJournal`): reverse returned goods,
+   book new goods, settle the diff in cash. Sold Products report also nets out returns now. Every
+   money event (sale, return, exchange, due collection, purchase, purchase return, expense, money
+   transfer/adjustment) posts a balanced journal — the P&L / Trial Balance are trustworthy.
 3. **Customer document uploads** (NID/driving-license photos) — form has the fields but actual image
    upload needs Supabase Storage (not built).
 4. **SMS module** — all screens are placeholders; real sending needs a Bangladeshi SMS gateway
@@ -123,6 +122,13 @@ Everything compiles; nothing is mid-edit. Last commit deployed successfully.
   utilities (`w-44` etc.) get overridden and layouts break.
 - **`cookies()` is async** in Next 16 (`await cookies()`). Middleware runs in **Edge** — use Web Crypto
   (`session.ts`), never Node `crypto` there.
+- **Never render `new Date()`/`Date.now()` directly in SSR'd markup.** The server is UTC, the shop's
+  browser is UTC+6, so near midnight they disagree → React hydration mismatch → EVERY `<Link>`'s client
+  navigation silently dies (looks like "buttons don't work"). This actually bit the Shell header date.
+  Fill such values in a `useEffect` after mount (see `Shell.tsx` `todayStr`).
+- **Date inputs use `src/components/DateInput.tsx`, not native `<input type="date">`** — the native
+  calendar popup follows the browser's OS locale (Chinese on the owner's Windows). DateInput is a
+  drop-in (same `value` yyyy-mm-dd / `onChange({target:{value}})`) that's always English.
 - **Node/npm/netlify in Bash** work only via `~/bin` shims (the Bash tool's PATH lacks Node). If they
   break, recreate shims pointing to `/c/Program Files/nodejs` and
   `/c/Users/ASADUL ISLAM/AppData/Roaming/npm`.
