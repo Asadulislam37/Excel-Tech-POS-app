@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { applyCourierStatus } from "@/lib/courier";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,9 @@ export async function POST(req: NextRequest) {
         : null;
   if (!where) return NextResponse.json({ ok: true });
 
-  await prisma.sale.updateMany({ where, data: { courierStatus: status } });
+  // Resolve the invoice, then apply the status (auto-settling the due on delivery).
+  const sale = await prisma.sale.findFirst({ where, select: { id: true } });
+  if (sale) await applyCourierStatus(sale.id, status);
   return NextResponse.json({ ok: true });
 }
 

@@ -2,7 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 
 // Payment method → the asset account money actually lands in.
 export const METHOD_ACCOUNT: Record<string, string> = {
-  CASH: "1000", BKASH: "1010", NAGAD: "1020", ROCKET: "1030", CARD: "1040", BANK: "1040",
+  CASH: "1000", BKASH: "1010", NAGAD: "1020", ROCKET: "1030", CARD: "1040", BANK: "1040", BANK_TRANSFER: "1040",
 };
 
 export const ACC = {

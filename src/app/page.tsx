@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { taka, dt } from "@/lib/format";
+import NotificationsBell from "@/components/NotificationsBell";
 import {
   ArrowDownLeft, ArrowUpRight, Wallet, ReceiptText, Package, TrendingDown,
   FilePlus2, RotateCcw, FileMinus2, HandCoins, ArrowLeftRight,
@@ -45,7 +46,10 @@ export default function Dashboard() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Dashboard</h1>
-        <span className="text-[13px] font-semibold text-muted">{today()}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[13px] font-semibold text-muted">{today()}</span>
+          <NotificationsBell />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[380px_1fr]">

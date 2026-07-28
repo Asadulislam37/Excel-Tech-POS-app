@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createOrder, getBalance, isConfigured, statusByConsignment } from "@/lib/steadfast";
+import { applyCourierStatus } from "@/lib/courier";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,8 @@ export async function GET(req: NextRequest) {
   if (!sale?.courierConsignmentId) return NextResponse.json({ error: "This invoice has no courier parcel." }, { status: 400 });
   try {
     const status = await statusByConsignment(sale.courierConsignmentId);
-    await prisma.sale.update({ where: { id: saleId }, data: { courierStatus: status } });
+    // On "delivered" this also auto-collects the remaining due (COD).
+    await applyCourierStatus(saleId, status);
     return NextResponse.json({ status });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Failed." }, { status: 400 });

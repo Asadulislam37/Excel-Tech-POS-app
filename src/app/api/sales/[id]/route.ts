@@ -51,9 +51,10 @@ async function reverseSale(tx: Prisma.TransactionClient, saleId: string) {
 
   await tx.stockLedger.deleteMany({ where: { refType: "Sale", refId: saleId } });
 
-  // Void the sale's accounting journal.
-  const journal = await tx.journalEntry.findFirst({ where: { refType: "Sale", refId: saleId } });
-  if (journal) await tx.journalEntry.delete({ where: { id: journal.id } });
+  // Void the sale's accounting journals — the sale itself and any due-collection receipts.
+  await tx.journalEntry.deleteMany({
+    where: { refId: saleId, refType: { in: ["Sale", "DueCollection"] } },
+  });
 
   // Claw back reward points granted for this sale.
   const points = await tx.rewardPointHistory.findMany({ where: { saleId } });

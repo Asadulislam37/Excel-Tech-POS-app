@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma, PaymentMethod } from "@/generated/prisma/client";
+import { postSaleReturnJournal } from "@/lib/sale-journal";
 
 export const dynamic = "force-dynamic";
 
@@ -91,8 +92,10 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      let restockCost = new Prisma.Decimal(0);
       for (const { line, saleItem } of prepared) {
         const restock = line.restock !== false;
+        if (restock) restockCost = restockCost.add(new Prisma.Decimal(saleItem.unitCost).mul(line.quantity));
         await tx.saleReturnItem.create({
           data: {
             returnId: saleReturn.id, saleItemId: saleItem.id, variantId: saleItem.variantId,
@@ -142,6 +145,15 @@ export async function POST(req: NextRequest) {
           paidTotal: new Prisma.Decimal(sale.paidTotal).sub(cashBack),
           status: "RETURNED",
         },
+      });
+
+      // Accounting: reverse revenue + COGS for the returned items so the P&L
+      // no longer counts profit on goods that came back.
+      await postSaleReturnJournal(tx, {
+        returnId: saleReturn.id, returnNo,
+        refundTotal: Number(total), restockCost: Number(restockCost),
+        offsetDue: Number(offsetDue), cashBack: Number(cashBack),
+        refundMethod,
       });
 
       return tx.saleReturn.findUniqueOrThrow({

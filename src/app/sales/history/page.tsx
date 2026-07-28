@@ -326,6 +326,7 @@ export default function SalesHistory() {
             <div className="rounded-md bg-ambersoft px-3 py-2 text-[12px] font-semibold text-amber">
               Steadfast will collect <b>{taka(Number(courier.dueTotal) + deliveryCharge)}</b> COD
               (product due {taka(courier.dueTotal)} + delivery {taka(deliveryCharge)}). Phone must be 11 digits, address required.
+              {Number(courier.dueTotal) > 0 && <><br />The {taka(courier.dueTotal)} due is cleared automatically once Steadfast marks the parcel <b>delivered</b>.</>}
             </div>
             {courierMsg && <div className="rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{courierMsg}</div>}
             <button className="btn btn-primary w-full py-3" disabled={busy} onClick={sendToCourier}>{busy ? "Creating parcel…" : "Create Parcel"}</button>
