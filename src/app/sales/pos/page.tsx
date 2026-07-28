@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { taka } from "@/lib/format";
-import { Search, Plus, Trash2, ScanBarcode, X, Printer, CheckCircle2, UserPlus } from "lucide-react";
+import { Search, Plus, Trash2, ScanBarcode, X, Printer, CheckCircle2, UserPlus, PauseCircle } from "lucide-react";
+import SalesTabs from "@/components/SalesTabs";
 
 type Variant = {
   id: string; sku: string; salePrice: string; costPrice: string;
@@ -29,7 +30,15 @@ export default function PosPage() {
   const [q, setQ] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [saleType, setSaleType] = useState<"CUSTOMER" | "RETAIL" | "WHOLESALE">("CUSTOMER");
   const [discount, setDiscount] = useState(0);
+  const [discountPct, setDiscountPct] = useState("");
+  const [additionalExpense, setAdditionalExpense] = useState(0);
+  const [vat, setVat] = useState(0);
+  const [workOrder, setWorkOrder] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [held, setHeld] = useState<{ id: string; cart: CartLine[]; label: string }[]>([]);
+  const [showHold, setShowHold] = useState(false);
   const [payments, setPayments] = useState([{ method: "CASH", amount: 0, reference: "" }]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState("");
@@ -61,9 +70,19 @@ export default function PosPage() {
   }, [custQ]);
 
   const subTotal = useMemo(() => cart.reduce((s, l) => s + l.quantity * l.unitPrice, 0), [cart]);
-  const grandTotal = Math.max(subTotal - discount, 0);
+  const totalQty = useMemo(() => cart.reduce((s, l) => s + l.quantity, 0), [cart]);
+  const grandTotal = Math.max(subTotal - discount + additionalExpense + vat, 0);
   const paidTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
-  const dueTotal = grandTotal - paidTotal;
+  const dueTotal = Math.max(grandTotal - paidTotal, 0);
+  const changeAmount = Math.max(paidTotal - grandTotal, 0);
+
+  // Typing a discount % keeps the taka amount in sync with the running sub-total.
+  const applyDiscountPct = (pct: string) => {
+    setDiscountPct(pct);
+    const n = Number(pct);
+    if (Number.isFinite(n) && n > 0) setDiscount(Math.round(subTotal * (n / 100)));
+    else if (pct === "") setDiscount(0);
+  };
 
   const addToCart = (p: Product, v: Variant) => {
     setCart((c) => {
@@ -136,7 +155,12 @@ export default function PosPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerId: customerId || undefined,
+          saleType,
           discount,
+          additionalExpense,
+          vat,
+          workOrder: workOrder || undefined,
+          note: remarks || undefined,
           items: cart.map((l) => ({
             variantId: l.variantId,
             quantity: l.quantity,
@@ -149,7 +173,9 @@ export default function PosPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setDone({ invoiceNo: data.invoiceNo, grandTotal: data.grandTotal, dueTotal: data.dueTotal });
-      setCart([]); setDiscount(0); setPayments([{ method: "CASH", amount: 0, reference: "" }]);
+      setCart([]); setDiscount(0); setDiscountPct(""); setAdditionalExpense(0); setVat(0);
+      setWorkOrder(""); setRemarks("");
+      setPayments([{ method: "CASH", amount: 0, reference: "" }]);
       setCustomerId(""); loadProducts(q);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sale failed.");
@@ -188,7 +214,45 @@ export default function PosPage() {
     );
   }
 
+  const holdCurrent = () => {
+    if (!cart.length) return;
+    setHeld((h) => [...h, { id: crypto.randomUUID(), cart, label: `${cart.length} item(s) · ${taka(subTotal)}` }]);
+    setCart([]); setDiscount(0); setDiscountPct("");
+  };
+  const resumeHeld = (id: string) => {
+    const entry = held.find((h) => h.id === id);
+    if (!entry) return;
+    setCart(entry.cart);
+    setHeld((h) => h.filter((x) => x.id !== id));
+  };
+
   return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SalesTabs />
+        <div className="flex items-center gap-2">
+          <button className="btn btn-ghost" onClick={holdCurrent} disabled={!cart.length}>
+            <PauseCircle size={15} /> Hold
+          </button>
+          <div className="relative">
+            <button className="btn btn-ghost" onClick={() => setShowHold((s) => !s)}>
+              Hold List <span className="rounded-full bg-amber px-1.5 text-[11px] font-bold text-white">{held.length}</span>
+            </button>
+            {showHold && (
+              <div className="card absolute right-0 top-11 z-40 w-64 p-1 shadow-lg">
+                {held.map((h) => (
+                  <button key={h.id} className="block w-full rounded-md px-3 py-2 text-left text-[13px] hover:bg-paper"
+                    onClick={() => { resumeHeld(h.id); setShowHold(false); }}>
+                    Resume — {h.label}
+                  </button>
+                ))}
+                {held.length === 0 && <div className="px-3 py-4 text-center text-[12px] text-muted">Nothing on hold.</div>}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
     <div className="grid gap-4 lg:grid-cols-[1fr_400px]">
       {/* Product side */}
       <div>
@@ -197,7 +261,7 @@ export default function PosPage() {
           <input
             ref={searchRef}
             className="input pl-9"
-            placeholder="Search product, brand, SKU or scan barcode…"
+            placeholder="Scan/Type Product ID or Name…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             autoFocus
@@ -241,7 +305,17 @@ export default function PosPage() {
 
       {/* Cart side */}
       <div className="card flex h-fit flex-col p-4 lg:sticky lg:top-[72px]">
-        <h2 className="text-[15px] font-bold">Invoice</h2>
+        <h2 className="text-[15px] font-bold">Invoice Summary</h2>
+
+        {/* Sale type */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {([["CUSTOMER", "Customer Sale"], ["RETAIL", "Retail Sale"], ["WHOLESALE", "Wholesale"]] as const).map(([v, label]) => (
+            <button key={v} onClick={() => setSaleType(v)}
+              className={`rounded-lg border px-2 py-2 text-[12px] font-semibold transition-colors ${saleType === v ? "border-teal bg-tealsoft text-tealdark" : "border-line text-muted hover:bg-paper"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
 
         {/* Customer */}
         <div className="mt-3">
@@ -257,6 +331,7 @@ export default function PosPage() {
             </button>
           </div>
           <input className="input mt-2" placeholder="Filter customers by name or phone…" value={custQ} onChange={(e) => setCustQ(e.target.value)} />
+          <input className="input mt-2" placeholder="Work Order (optional)" value={workOrder} onChange={(e) => setWorkOrder(e.target.value)} />
         </div>
 
         {/* Lines */}
@@ -301,13 +376,34 @@ export default function PosPage() {
         </div>
 
         {/* Totals */}
-        <div className="mt-3 space-y-1.5 border-t border-line pt-3 text-[13px]">
-          <div className="flex justify-between"><span className="text-muted">Subtotal</span><span>{taka(subTotal)}</span></div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted">Discount</span>
-            <input type="number" min={0} className="input w-28 text-right" value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)} />
+        <div className="mt-3 space-y-2 border-t border-line pt-3 text-[13px]">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-[11px] font-semibold uppercase text-muted">Total Qty
+              <input className="input mt-1 bg-paper" readOnly value={totalQty} />
+            </label>
+            <label className="block text-[11px] font-semibold uppercase text-muted">Amount
+              <input className="input mt-1 bg-paper" readOnly value={taka(subTotal)} />
+            </label>
+            <label className="block text-[11px] font-semibold uppercase text-muted">Additional Expense
+              <input type="number" min={0} className="input mt-1" value={additionalExpense || ""} placeholder="0"
+                onChange={(e) => setAdditionalExpense(Number(e.target.value) || 0)} />
+            </label>
+            <label className="block text-[11px] font-semibold uppercase text-muted">VAT
+              <input type="number" min={0} className="input mt-1" value={vat || ""} placeholder="0"
+                onChange={(e) => setVat(Number(e.target.value) || 0)} />
+            </label>
+            <label className="block text-[11px] font-semibold uppercase text-muted">Total Discount
+              <input type="number" min={0} className="input mt-1" value={discount || ""} placeholder="0"
+                onChange={(e) => { setDiscount(Number(e.target.value) || 0); setDiscountPct(""); }} />
+            </label>
+            <label className="block text-[11px] font-semibold uppercase text-muted">Discount %
+              <input type="number" min={0} max={100} className="input mt-1" value={discountPct} placeholder="0"
+                onChange={(e) => applyDiscountPct(e.target.value)} />
+            </label>
           </div>
-          <div className="flex justify-between text-[15px] font-bold"><span>Total</span><span>{taka(grandTotal)}</span></div>
+          <div className="flex justify-between rounded-lg bg-tealsoft px-3 py-2 text-[15px] font-bold text-tealdark">
+            <span>Total Payable</span><span>{taka(grandTotal)}</span>
+          </div>
         </div>
 
         {/* Payments */}
@@ -331,6 +427,11 @@ export default function PosPage() {
               Exact cash
             </button>
           </div>
+          {changeAmount > 0 && (
+            <div className="flex justify-between rounded-md bg-tealsoft px-3 py-2 text-[12px] font-semibold text-tealdark">
+              <span>Change Amount</span><span>{taka(changeAmount)}</span>
+            </div>
+          )}
           {dueTotal > 0 && cart.length > 0 && (
             <div className="rounded-md bg-ambersoft px-3 py-2 text-[12px] font-semibold text-amber">
               {taka(dueTotal)} will be recorded as due{!customerId && " — select a customer for due sales"}
@@ -338,12 +439,15 @@ export default function PosPage() {
           )}
         </div>
 
+        <textarea className="input mt-3 min-h-16" placeholder="Add remarks here…" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+
         {error && <div className="mt-3 rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{error}</div>}
 
         <button className="btn btn-primary mt-4 w-full py-3 text-[14px]" disabled={!cartValid || busy || (dueTotal > 0 && !customerId)} onClick={completeSale}>
-          {busy ? "Saving…" : `Complete sale · ${taka(grandTotal)}`}
+          {busy ? "Saving…" : `Place Order · ${taka(grandTotal)}`}
         </button>
       </div>
+    </div>
 
       {/* Serial picker modal */}
       {serialPicker && (

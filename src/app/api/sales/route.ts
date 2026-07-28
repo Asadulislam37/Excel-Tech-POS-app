@@ -4,18 +4,53 @@ import { Prisma } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/sales → recent invoices
-export async function GET() {
-  const sales = await prisma.sale.findMany({
-    include: {
-      customer: true,
-      items: { include: { variant: { include: { product: true } }, serialUnits: true } },
-      payments: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
+// GET /api/sales?q=&outletId=&type=&date=&page=1 → invoice list
+export async function GET(req: NextRequest) {
+  const p = req.nextUrl.searchParams;
+  const q = p.get("q")?.trim() ?? "";
+  const outletId = p.get("outletId") ?? "";
+  const type = p.get("type") ?? "";
+  const date = p.get("date") ?? "";
+  const page = Math.max(1, Number(p.get("page")) || 1);
+
+  const where: Prisma.SaleWhereInput = {
+    ...(outletId && { outletId }),
+    ...(type && { saleType: type as Prisma.SaleWhereInput["saleType"] }),
+    ...(date && {
+      createdAt: { gte: new Date(date), lte: new Date(`${date}T23:59:59`) },
+    }),
+    ...(q && {
+      OR: [
+        { invoiceNo: { contains: q, mode: "insensitive" as const } },
+        { customer: { name: { contains: q, mode: "insensitive" as const } } },
+        { customer: { phone: { contains: q } } },
+      ],
+    }),
+  };
+
+  const [total, sales, agg] = await Promise.all([
+    prisma.sale.count({ where }),
+    prisma.sale.findMany({
+      where,
+      include: {
+        customer: true,
+        outlet: { select: { name: true } },
+        items: { include: { variant: { include: { product: true } }, serialUnits: true } },
+        payments: true,
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * 50,
+      take: 50,
+    }),
+    prisma.sale.aggregate({ where, _sum: { grandTotal: true, dueTotal: true } }),
+  ]);
+
+  return NextResponse.json({
+    total,
+    totalAmount: Number(agg._sum.grandTotal ?? 0),
+    totalDue: Number(agg._sum.dueTotal ?? 0),
+    rows: sales,
   });
-  return NextResponse.json(sales);
 }
 
 type CartItem = {
@@ -29,11 +64,20 @@ type PaymentInput = { method: string; amount: number; reference?: string };
 // POST /api/sales — create invoice
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { customerId, items, payments, discount = 0 } = body as {
+  const {
+    customerId, items, payments, discount = 0,
+    saleType = "CUSTOMER", vat = 0, additionalExpense = 0, workOrder, note, soldById,
+  } = body as {
     customerId?: string;
     items: CartItem[];
     payments: PaymentInput[];
     discount?: number;
+    saleType?: "CUSTOMER" | "RETAIL" | "WHOLESALE";
+    vat?: number;
+    additionalExpense?: number;
+    workOrder?: string;
+    note?: string;
+    soldById?: string;
   };
 
   if (!items?.length) return NextResponse.json({ error: "Cart is empty." }, { status: 400 });
@@ -75,30 +119,38 @@ export async function POST(req: NextRequest) {
         prepared.push({ item, variant, lineTotal });
       }
 
-      const grandTotal = subTotal.sub(discount);
+      // Payable = items − discount + delivery/extra charge + VAT
+      const grandTotal = subTotal.sub(discount).add(additionalExpense).add(vat);
       const paidTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
-      const dueTotal = grandTotal.sub(paidTotal);
-      if (dueTotal.lt(0)) throw new Error("Paid amount exceeds the invoice total.");
+      // Overpayment is change given back, not a negative due.
+      const dueTotal = Prisma.Decimal.max(grandTotal.sub(paidTotal), 0);
       if (dueTotal.gt(0) && !customerId)
         throw new Error("Due sales need a customer. Add the customer first.");
 
-      // Invoice number: INV-240723-0001
+      // Invoice number carries the sale type: CS-260728-0001
+      const prefix = saleType === "WHOLESALE" ? "WS" : saleType === "RETAIL" ? "RS" : "CS";
       const today = new Date();
       const ymd = today.toISOString().slice(2, 10).replace(/-/g, "");
       const countToday = await tx.sale.count({
         where: { createdAt: { gte: new Date(today.toDateString()) } },
       });
-      const invoiceNo = `INV-${ymd}-${String(countToday + 1).padStart(4, "0")}`;
+      const invoiceNo = `${prefix}-${ymd}-${String(countToday + 1).padStart(4, "0")}`;
 
       const sale = await tx.sale.create({
         data: {
           invoiceNo,
           customerId: customerId || undefined,
           outletId: outlet.id,
+          soldById: soldById || undefined,
+          saleType,
+          workOrder: workOrder || undefined,
+          note: note || undefined,
           subTotal,
           discount,
+          additionalExpense,
+          vat,
           grandTotal,
-          paidTotal,
+          paidTotal: Prisma.Decimal.min(paidTotal, grandTotal),
           dueTotal,
           status: dueTotal.gt(0) ? (paidTotal > 0 ? "PARTIAL_DUE" : "FULL_DUE") : "COMPLETED",
         },

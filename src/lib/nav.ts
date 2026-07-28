@@ -26,7 +26,7 @@ export const NAV: NavItem[] = [
     children: [
       { label: "Create Invoice", href: "/sales/pos", built: true },
       { label: "Sold History", href: "/sales/history", built: true },
-      { label: "Sold Products", href: "/sales/products", phase: 2 },
+      { label: "Sold Products", href: "/sales/products", built: true },
     ],
   },
   {

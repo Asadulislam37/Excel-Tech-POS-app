@@ -322,6 +322,12 @@ enum SaleStatus {
   EXCHANGED
 }
 
+enum SaleType {
+  CUSTOMER
+  RETAIL
+  WHOLESALE
+}
+
 model Sale {
   id          String     @id @default(cuid())
   invoiceNo   String     @unique
@@ -331,8 +337,11 @@ model Sale {
   outlet      Outlet     @relation(fields: [outletId], references: [id])
   soldById    String?
   soldBy      User?      @relation(fields: [soldById], references: [id])
+  saleType    SaleType   @default(CUSTOMER)
+  workOrder   String?
   subTotal    Decimal    @db.Decimal(14, 2)
   discount    Decimal    @default(0) @db.Decimal(14, 2)
+  additionalExpense Decimal @default(0) @db.Decimal(14, 2)
   vat         Decimal    @default(0) @db.Decimal(14, 2)
   grandTotal  Decimal    @db.Decimal(14, 2)
   paidTotal   Decimal    @default(0) @db.Decimal(14, 2)
