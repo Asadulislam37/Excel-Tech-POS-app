@@ -48,3 +48,4 @@ prisma/import-products.json
 
 # Local Netlify folder
 .netlify
+prisma/*.mts
