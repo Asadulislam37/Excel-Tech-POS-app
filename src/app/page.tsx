@@ -38,7 +38,7 @@ export default function Dashboard() {
     { label: "Create Return", href: "/returns/sale", icon: RotateCcw, bg: "#dcfce7", fg: "#15803d" },
     { label: "Expense Voucher", href: "/accounting/expense", icon: FileMinus2, bg: "#fee2e2", fg: "#b91c1c" },
     { label: "Collect Due", href: "/accounting/due-collection", icon: HandCoins, bg: "#f3e8ff", fg: "#7e22ce" },
-    { label: "Money Transfer", href: "/accounting/cash", icon: ArrowLeftRight, bg: "#ffedd5", fg: "#c2410c" },
+    { label: "Daily Statement", href: "/accounting/daily", icon: ArrowLeftRight, bg: "#ffedd5", fg: "#c2410c" },
   ];
 
   return (

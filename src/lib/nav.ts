@@ -90,17 +90,17 @@ export const NAV: NavItem[] = [
   {
     label: "Accounting", icon: "Calculator",
     children: [
-      { label: "Daily Statement", href: "/accounting/daily", phase: 4 },
-      { label: "Cash Statement", href: "/accounting/cash", phase: 4 },
+      { label: "Daily Statement", href: "/accounting/daily", built: true },
+      { label: "Cash Statement", href: "/accounting/daily", built: true },
       { label: "Manage Journal", href: "/accounting/journal", phase: 4 },
-      { label: "Expense Voucher", href: "/accounting/expense", phase: 4 },
+      { label: "Expense Voucher", href: "/accounting/expense", built: true },
       { label: "Due Collection", href: "/accounting/due-collection", built: true },
-      { label: "Supplier Payment", href: "/accounting/supplier-payment", phase: 4 },
-      { label: "Ledger", href: "/accounting/ledger", phase: 4 },
+      { label: "Supplier Payment", href: "/accounting/supplier-payment", built: true },
+      { label: "Ledger", href: "/accounting/ledger", built: true },
       { label: "Trial Balance", href: "/accounting/trial-balance", phase: 5 },
       { label: "Profit Or Loss", href: "/accounting/pnl", phase: 5 },
       { label: "Balance Sheet", href: "/accounting/balance-sheet", phase: 5 },
-      { label: "Chart of Account", href: "/accounting/coa", phase: 4 },
+      { label: "Chart of Account", href: "/accounting/coa", built: true },
     ],
   },
   {

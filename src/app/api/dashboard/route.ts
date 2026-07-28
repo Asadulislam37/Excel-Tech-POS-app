@@ -50,7 +50,14 @@ export async function GET() {
     .slice(0, 10);
 
   const cashIn = Number(payAgg._sum.amount ?? 0);
-  const cashOut = 0; // expense vouchers / supplier payments come in a later phase
+  const [expenseAgg, supplierAgg] = await Promise.all([
+    prisma.journalLine.aggregate({
+      where: { account: { type: "EXPENSE" }, entry: { date: { gte: startOfDay }, refType: "Expense" } },
+      _sum: { debit: true },
+    }),
+    prisma.supplierPayment.aggregate({ where: { createdAt: { gte: startOfDay } }, _sum: { amount: true } }),
+  ]);
+  const cashOut = Number(expenseAgg._sum.debit ?? 0) + Number(supplierAgg._sum.amount ?? 0);
 
   return NextResponse.json({
     todaySales,
