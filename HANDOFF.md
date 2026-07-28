@@ -64,7 +64,8 @@ Warranty Claim, Rewards (Setup/Level/History), Role Management, Reports→Day Bo
 nextVoucherNo), `sale-journal.ts` (postSaleJournal — revenue+COGS), `session.ts` (Web Crypto
 sign/verify), `auth.ts` (currentUser), `password.ts` (scrypt), `reset-token.ts`, `email.ts`
 (nodemailer), `steadfast.ts` (createOrder/statusByConsignment/getBalance), `format.ts` (taka/dt),
-`words.ts` (takaInWords), `export.ts` (CSV/Excel), `nav.ts` (nested nav tree).
+`words.ts` (takaInWords), `export.ts` (CSV/Excel), `nav.ts` (nested nav tree),
+`settings.ts` (shop-wide Setting helpers — `getDeliveryCharges`/`saveDeliveryCharges`).
 
 **Components (`src/components/`):** `Shell.tsx` (sidebar nav + header + theme toggle + Quick Access
 dropdown + user menu — logo links home), `InvoiceView.tsx` (A4/POS/Download invoice),
@@ -80,9 +81,9 @@ journals), `purchase/*`, `returns/*`, `exchanges/*`, `steadfast/route.ts`, `webh
 Everything compiles; nothing is mid-edit. Last commit deployed successfully.
 
 ## 5. Open Problems
-1. **P&L missing 2 old sales:** invoices CS-260728-0001 and -0002 were created *before* sales-journal
-   posting existed, so they have no journal and don't show in P&L. Owner was asked about a backfill —
-   not yet answered.
+1. ✅ **RESOLVED — P&L missing 2 old sales:** CS-260728-0001 and -0002 were backfilled with sale
+   journals (vouchers SAL-BF-0001/0002, dated to the original sale date). Trial balance reconciles
+   (৳449,000 = ৳449,000). These were the only two unposted sales in the DB.
 2. **Customer document uploads** (NID/driving-license photos) — form has the fields but actual image
    upload needs Supabase Storage (not built).
 3. **SMS module** — all screens are placeholders; real sending needs a Bangladeshi SMS gateway
@@ -91,14 +92,17 @@ Everything compiles; nothing is mid-edit. Last commit deployed successfully.
    cold-starts + Supabase Singapore latency.
 
 ## 6. Next Steps (in order)
-1. Await owner feedback on the 3 fixes just shipped: dashboard dark-text, ⋯-menu no-shift, courier
-   delivery-charge zone.
-2. If yes → **backfill journals for the 2 old sales** so P&L is complete.
-3. Offered, awaiting confirmation: (a) add **"Assist By / Service Staff"** field to POS + invoice;
-   (b) make **80/120 delivery charge a shop-wide Configuration setting** instead of per-order.
-4. Remaining placeholder screens by value: Warranty Claim, Rewards, Role Management, Day Book, then
+1. ✅ **SHIPPED (commit 9919b8d):** (a) journal backfill for the 2 old sales; (b) **"Assist By /
+   Service Staff"** field on POS + all invoice formats (`assistedBy` column); (c) **shop-wide delivery
+   charge** — now a Configuration screen at **/config/delivery** (Setting keys `delivery_inside_dhaka`
+   / `delivery_outside_dhaka`, default 80/120). Read by the courier modal AND the online store
+   (checkout + product page + orders API). NOTE: the online store previously hardcoded 70/130 — it now
+   uses the same shop-wide charge (80/120 default). Tell the owner they can split these later if the
+   online delivery fee should differ from the courier charge.
+2. Await owner feedback on the above + the earlier 3 fixes (dashboard dark-text, ⋯-menu, courier zone).
+3. Remaining placeholder screens by value: Warranty Claim, Rewards, Role Management, Day Book, then
    SMS (blocked on gateway creds).
-5. Customer document uploads (needs Supabase Storage setup).
+4. Customer document uploads (needs Supabase Storage setup).
 
 ## 7. Gotchas (important!)
 - **Build MUST use `next build --webpack`.** Turbopack crashes on this Windows path (spaces + parens)
@@ -126,7 +130,8 @@ Everything compiles; nothing is mid-edit. Last commit deployed successfully.
   This is intentional (drives Serial Number Track).
 - **Steadfast:** API base `https://portal.packzy.com/api/v1`, headers `Api-Key`/`Secret-Key`. No
   delivery-charge field — you only control `cod_amount`. Owner's delivery charge (Inside Dhaka 80 /
-  Outside 120) is **added to COD**; Steadfast's own merchant fee is separate/auto. Set webhook in the
+  Outside 120, now editable at **/config/delivery**) is **added to COD**; Steadfast's own merchant fee
+  is separate/auto. Set webhook in the
   Steadfast portal to `https://exceltechpos.netlify.app/api/webhook/steadfast`.
 - **Deploy flow:** `git add -A && git commit && git push` then `netlify deploy --build --prod`. Netlify
   blob-upload sometimes throws a transient "fetch failed" — just re-run the deploy.
