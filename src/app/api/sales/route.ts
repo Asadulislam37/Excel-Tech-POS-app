@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     customerId, items, payments, discount = 0,
-    saleType = "CUSTOMER", vat = 0, additionalExpense = 0, workOrder, note, soldById,
+    saleType = "CUSTOMER", vat = 0, additionalExpense = 0, workOrder, note, soldById, assistedBy,
   } = body as {
     customerId?: string;
     items: CartItem[];
@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
     workOrder?: string;
     note?: string;
     soldById?: string;
+    assistedBy?: string;
   };
 
   if (!items?.length) return NextResponse.json({ error: "Cart is empty." }, { status: 400 });
@@ -145,6 +146,7 @@ export async function POST(req: NextRequest) {
           customerId: customerId || undefined,
           outletId: outlet.id,
           soldById: soldById || (await currentUser())?.uid || undefined,
+          assistedBy: assistedBy || undefined,
           saleType,
           workOrder: workOrder || undefined,
           note: note || undefined,

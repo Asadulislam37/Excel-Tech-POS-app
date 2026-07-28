@@ -5,7 +5,7 @@ import { takaInWords } from "@/lib/words";
 import { Download, Printer, X } from "lucide-react";
 
 export type InvoiceSale = {
-  id: string; invoiceNo: string; saleType: string; workOrder?: string | null; note?: string | null;
+  id: string; invoiceNo: string; saleType: string; workOrder?: string | null; assistedBy?: string | null; note?: string | null;
   subTotal: string; discount: string; additionalExpense: string; vat: string;
   grandTotal: string; paidTotal: string; dueTotal: string; createdAt: string;
   customer?: { name: string; phone: string; address?: string | null } | null;
@@ -122,6 +122,7 @@ export function a4Html(s: InvoiceSale) {
     </div>
     <div class="by">
       <div><b>Created By:</b> ${s.soldBy?.name ?? "Excel Tech"}</div>
+      ${s.assistedBy ? `<div><b>Assist By:</b> ${s.assistedBy}</div>` : ""}
     </div>
     <div class="terms"><h4>Terms &amp; Conditions:</h4>${TERMS.map((t) => `<div>• ${t}</div>`).join("")}</div>
   </div></body></html>`;
@@ -168,7 +169,7 @@ export function posHtml(s: InvoiceSale) {
     <hr>
     <div class="muted">In words: ${takaInWords(s.grandTotal)}</div>
     <div class="terms">${TERMS.map((t) => `• ${t}`).join("<br>")}</div>
-    <div class="ctr muted" style="margin-top:8px">Prepared by ${s.soldBy?.name ?? "Excel Tech"}<br>Thank you for shopping!</div>
+    <div class="ctr muted" style="margin-top:8px">Prepared by ${s.soldBy?.name ?? "Excel Tech"}${s.assistedBy ? `<br>Assist by ${s.assistedBy}` : ""}<br>Thank you for shopping!</div>
   </body></html>`;
 }
 
@@ -257,7 +258,10 @@ export default function InvoiceView({ sale, onClose }: { sale: InvoiceSale; onCl
             </table>
           </div>
 
-          <div className="mt-2 text-right text-[13px]"><b>Created By:</b> {sale.soldBy?.name ?? "Excel Tech"}</div>
+          <div className="mt-2 text-right text-[13px]">
+            <div><b>Created By:</b> {sale.soldBy?.name ?? "Excel Tech"}</div>
+            {sale.assistedBy && <div><b>Assist By:</b> {sale.assistedBy}</div>}
+          </div>
 
           <div className="mt-8 text-[12.5px] leading-7">
             <h4 className="font-bold">Terms &amp; Conditions:</h4>

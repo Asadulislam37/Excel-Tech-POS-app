@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { getDeliveryCharges } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
-
-const DELIVERY = { INSIDE_DHAKA: 70, OUTSIDE_DHAKA: 130 } as const;
 
 // GET — admin: list online orders
 export async function GET() {
@@ -64,7 +63,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const deliveryCharge = DELIVERY[area] ?? DELIVERY.OUTSIDE_DHAKA;
+  const charges = await getDeliveryCharges();
+  const deliveryCharge = area === "INSIDE_DHAKA" ? charges.insideDhaka : charges.outsideDhaka;
   const grandTotal = subTotal.add(deliveryCharge);
   const count = await prisma.onlineOrder.count();
   const order = await prisma.onlineOrder.create({

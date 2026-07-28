@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getDeliveryCharges } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const [brands, categories, colors, sizes, units, warranties, suppliers, outlets] = await Promise.all([
+  const [brands, categories, colors, sizes, units, warranties, suppliers, outlets, delivery] = await Promise.all([
     prisma.brand.findMany({ orderBy: { name: "asc" } }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
     prisma.color.findMany({ orderBy: { name: "asc" } }),
@@ -13,10 +14,11 @@ export async function GET() {
     prisma.warrantyPolicy.findMany({ orderBy: { name: "asc" } }),
     prisma.supplier.findMany({ orderBy: { name: "asc" } }),
     prisma.outlet.findMany({ orderBy: { name: "asc" } }),
+    getDeliveryCharges(),
   ]);
   // Config changes rarely — let the browser reuse it across page navigations.
   return NextResponse.json(
-    { brands, categories, colors, sizes, units, warranties, suppliers, outlets },
+    { brands, categories, colors, sizes, units, warranties, suppliers, outlets, delivery },
     { headers: { "Cache-Control": "private, max-age=120" } }
   );
 }

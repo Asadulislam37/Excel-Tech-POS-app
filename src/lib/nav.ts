@@ -153,6 +153,7 @@ export const NAV: NavItem[] = [
       { label: "Supplier", href: "/config/supplier", built: true },
       { label: "Unit", href: "/config/unit", built: true },
       { label: "Warranty", href: "/config/warranty", built: true },
+      { label: "Delivery Charge", href: "/config/delivery", built: true },
       { label: "Role Management", href: "/config/roles", phase: 4 },
     ],
   },

@@ -23,7 +23,7 @@ export default function SalesHistory() {
   const [date, setDate] = useState("");
   const [page, setPage] = useState(1);
   const [d, setD] = useState<Data | null>(null);
-  const [cfg, setCfg] = useState<{ outlets: Named[] } | null>(null);
+  const [cfg, setCfg] = useState<{ outlets: Named[]; delivery?: { insideDhaka: number; outsideDhaka: number } } | null>(null);
   const [view, setView] = useState<Sale | null>(null);
   const [menuFor, setMenuFor] = useState("");
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -44,6 +44,13 @@ export default function SalesHistory() {
   const [deliveryCharge, setDeliveryCharge] = useState(80); // Inside Dhaka default
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+
+  // Shop-wide delivery charges from Configuration (fallback to 80 / 120).
+  const insideCharge = cfg?.delivery?.insideDhaka ?? 80;
+  const outsideCharge = cfg?.delivery?.outsideDhaka ?? 120;
+
+  // Default the courier charge to the configured Inside-Dhaka rate when opening.
+  const openCourier = (s: Sale) => { setDeliveryCharge(insideCharge); setCourier(s); };
 
   const sendToCourier = async () => {
     if (!courier) return;
@@ -228,7 +235,7 @@ export default function SalesHistory() {
                           </button>
                         ) : (
                           <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold hover:bg-paper"
-                            onClick={() => { setMenuFor(""); setCourier(s); }}>
+                            onClick={() => { setMenuFor(""); openCourier(s); }}>
                             <Truck size={13} /> Send to Courier
                           </button>
                         )}
@@ -299,10 +306,13 @@ export default function SalesHistory() {
             <div className="rounded-lg bg-paper px-3 py-2 text-[12px]"><span className="text-muted">Address:</span> {courier.customer?.address ?? "— (required)"}</div>
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-[12px] font-semibold text-muted">Delivery Zone
-                <select className="input mt-1" value={deliveryCharge === 80 ? "80" : deliveryCharge === 120 ? "120" : "custom"}
-                  onChange={(e) => { if (e.target.value !== "custom") setDeliveryCharge(Number(e.target.value)); }}>
-                  <option value="80">Inside Dhaka — ৳80</option>
-                  <option value="120">Outside Dhaka — ৳120</option>
+                <select className="input mt-1" value={deliveryCharge === insideCharge ? "inside" : deliveryCharge === outsideCharge ? "outside" : "custom"}
+                  onChange={(e) => {
+                    if (e.target.value === "inside") setDeliveryCharge(insideCharge);
+                    else if (e.target.value === "outside") setDeliveryCharge(outsideCharge);
+                  }}>
+                  <option value="inside">Inside Dhaka — {taka(insideCharge)}</option>
+                  <option value="outside">Outside Dhaka — {taka(outsideCharge)}</option>
                   <option value="custom">Custom</option>
                 </select>
               </label>

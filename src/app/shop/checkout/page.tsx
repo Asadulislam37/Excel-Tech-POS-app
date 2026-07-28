@@ -6,21 +6,27 @@ import { taka } from "@/lib/format";
 import { getCart, setCart, CartItem } from "@/lib/cart";
 import { Trash2, CheckCircle2 } from "lucide-react";
 
-const DELIVERY = { INSIDE_DHAKA: 70, OUTSIDE_DHAKA: 130 };
-
 export default function CheckoutPage() {
   const [cart, setCartState] = useState<CartItem[]>([]);
   const [form, setForm] = useState({ customerName: "", phone: "", address: "", area: "INSIDE_DHAKA", note: "", payMethod: "COD", payReference: "" });
+  const [delivery, setDelivery] = useState({ INSIDE_DHAKA: 80, OUTSIDE_DHAKA: 120 });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState<{ orderNo: string; grandTotal: string } | null>(null);
 
   useEffect(() => { setCartState(getCart()); }, []);
+  useEffect(() => {
+    fetch("/api/shop/delivery").then(async (r) => {
+      if (!r.ok) return;
+      const { delivery: d } = await r.json();
+      setDelivery({ INSIDE_DHAKA: d.insideDhaka, OUTSIDE_DHAKA: d.outsideDhaka });
+    });
+  }, []);
 
   const update = (items: CartItem[]) => { setCart(items); setCartState(items); };
   const subTotal = cart.reduce((s, c) => s + c.unitPrice * c.quantity, 0);
-  const delivery = DELIVERY[form.area as keyof typeof DELIVERY];
-  const grand = subTotal + delivery;
+  const deliveryFee = delivery[form.area as keyof typeof delivery];
+  const grand = subTotal + deliveryFee;
 
   const submit = async () => {
     setErr(""); setBusy(true);
@@ -74,7 +80,7 @@ export default function CheckoutPage() {
             {(["INSIDE_DHAKA", "OUTSIDE_DHAKA"] as const).map((a) => (
               <button key={a} onClick={() => setForm({ ...form, area: a })}
                 className={`rounded-lg border px-3 py-2.5 text-[13px] font-semibold ${form.area === a ? "border-teal bg-tealsoft text-tealdark" : "border-line"}`}>
-                {a === "INSIDE_DHAKA" ? `Inside Dhaka · ${taka(DELIVERY.INSIDE_DHAKA)}` : `Outside Dhaka · ${taka(DELIVERY.OUTSIDE_DHAKA)}`}
+                {a === "INSIDE_DHAKA" ? `Inside Dhaka · ${taka(delivery.INSIDE_DHAKA)}` : `Outside Dhaka · ${taka(delivery.OUTSIDE_DHAKA)}`}
               </button>
             ))}
           </div>
@@ -114,7 +120,7 @@ export default function CheckoutPage() {
         </div>
         <div className="mt-4 space-y-1.5 border-t border-line pt-3 text-[13px]">
           <div className="flex justify-between"><span className="text-muted">Subtotal</span><span>{taka(subTotal)}</span></div>
-          <div className="flex justify-between"><span className="text-muted">Delivery</span><span>{taka(delivery)}</span></div>
+          <div className="flex justify-between"><span className="text-muted">Delivery</span><span>{taka(deliveryFee)}</span></div>
           <div className="flex justify-between text-[15px] font-bold"><span>Total</span><span>{taka(grand)}</span></div>
         </div>
         {err && <div className="mt-3 rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{err}</div>}

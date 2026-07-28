@@ -23,12 +23,17 @@ export default function ProductPage() {
   const [p, setP] = useState<Product | null>(null);
   const [sel, setSel] = useState<Variant | null>(null);
   const [added, setAdded] = useState(false);
+  const [delivery, setDelivery] = useState({ insideDhaka: 80, outsideDhaka: 120 });
 
   useEffect(() => {
     fetch(`/api/shop/products?slug=${encodeURIComponent(slug)}`).then(async (r) => {
       if (r.ok) { const d = await r.json(); setP(d); setSel(d.variants[0] ?? null); }
     });
   }, [slug]);
+
+  useEffect(() => {
+    fetch("/api/shop/delivery").then(async (r) => { if (r.ok) setDelivery((await r.json()).delivery); });
+  }, []);
 
   if (!p) return <div className="py-20 text-center text-sm text-muted">Loading…</div>;
 
@@ -93,7 +98,7 @@ export default function ProductPage() {
         )}
         {p.description && <p className="mt-5 text-[14px] leading-relaxed text-body">{p.description}</p>}
         <div className="mt-5 rounded-lg bg-card p-4 text-[13px] text-muted">
-          Cash on delivery available · Inside Dhaka ৳70, outside ৳130 · Visit our shop at Shyamoli Square for EMI purchase
+          Cash on delivery available · Inside Dhaka {taka(delivery.insideDhaka)}, outside {taka(delivery.outsideDhaka)} · Visit our shop at Shyamoli Square for EMI purchase
         </div>
       </div>
     </div>

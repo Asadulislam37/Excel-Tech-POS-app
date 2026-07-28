@@ -37,6 +37,7 @@ export default function PosPage() {
   const [additionalExpense, setAdditionalExpense] = useState(0);
   const [vat, setVat] = useState(0);
   const [workOrder, setWorkOrder] = useState("");
+  const [assistedBy, setAssistedBy] = useState("");
   const [remarks, setRemarks] = useState("");
   const [held, setHeld] = useState<{ id: string; cart: CartLine[]; label: string }[]>([]);
   const [showHold, setShowHold] = useState(false);
@@ -87,6 +88,7 @@ export default function PosPage() {
       setAdditionalExpense(Number(s.additionalExpense) || 0);
       setVat(Number(s.vat) || 0);
       setWorkOrder(s.workOrder ?? "");
+      setAssistedBy(s.assistedBy ?? "");
       setRemarks(s.note ?? "");
       setPayments(s.payments.length
         ? s.payments.map((p: { method: string; amount: string; reference?: string }) =>
@@ -201,6 +203,7 @@ export default function PosPage() {
           additionalExpense,
           vat,
           workOrder: workOrder || undefined,
+          assistedBy: assistedBy || undefined,
           note: remarks || undefined,
           items: cart.map((l) => ({
             variantId: l.variantId,
@@ -218,7 +221,7 @@ export default function PosPage() {
       const full = await fetch(`/api/sales/${data.id}`).then((r) => (r.ok ? r.json() : null));
       if (full) setInvoiceSale(full);
       setCart([]); setDiscount(0); setDiscountPct(""); setAdditionalExpense(0); setVat(0);
-      setWorkOrder(""); setRemarks("");
+      setWorkOrder(""); setAssistedBy(""); setRemarks("");
       setPayments([{ method: "CASH", amount: 0, reference: "" }]);
       setCustomerId(""); setEditId(""); loadProducts(q);
     } catch (e) {
@@ -373,6 +376,7 @@ export default function PosPage() {
           </div>
           <input className="input mt-2" placeholder="Filter customers by name or phone…" value={custQ} onChange={(e) => setCustQ(e.target.value)} />
           <input className="input mt-2" placeholder="Work Order (optional)" value={workOrder} onChange={(e) => setWorkOrder(e.target.value)} />
+          <input className="input mt-2" placeholder="Assist By / Service Staff (optional)" value={assistedBy} onChange={(e) => setAssistedBy(e.target.value)} />
         </div>
 
         {/* Lines */}

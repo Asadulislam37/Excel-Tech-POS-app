@@ -96,11 +96,11 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const body = await req.json();
   const {
     customerId, items, payments = [], discount = 0,
-    saleType = "CUSTOMER", vat = 0, additionalExpense = 0, workOrder, note, soldById,
+    saleType = "CUSTOMER", vat = 0, additionalExpense = 0, workOrder, note, soldById, assistedBy,
   } = body as {
     customerId?: string; items: CartItem[]; payments: { method: string; amount: number; reference?: string }[];
     discount?: number; saleType?: "CUSTOMER" | "RETAIL" | "WHOLESALE"; vat?: number;
-    additionalExpense?: number; workOrder?: string; note?: string; soldById?: string;
+    additionalExpense?: number; workOrder?: string; note?: string; soldById?: string; assistedBy?: string;
   };
 
   if (!items?.length) return NextResponse.json({ error: "Invoice must have at least one item." }, { status: 400 });
@@ -153,6 +153,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         data: {
           customerId: customerId || null,
           soldById: soldById || null,
+          assistedBy: assistedBy || null,
           saleType, workOrder: workOrder || null, note: note || null,
           subTotal, discount, additionalExpense, vat, grandTotal,
           paidTotal: Prisma.Decimal.min(paidTotal, grandTotal),

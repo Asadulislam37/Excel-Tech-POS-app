@@ -346,6 +346,7 @@ model Sale {
   outlet      Outlet     @relation(fields: [outletId], references: [id])
   soldById    String?
   soldBy      User?      @relation(fields: [soldById], references: [id])
+  assistedBy  String?    // "Assist By" / service staff who helped with the sale
   saleType    SaleType   @default(CUSTOMER)
   workOrder   String?
   subTotal    Decimal    @db.Decimal(14, 2)
