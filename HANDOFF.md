@@ -65,7 +65,9 @@ nextVoucherNo), `sale-journal.ts` (postSaleJournal — revenue+COGS), `session.t
 sign/verify), `auth.ts` (currentUser), `password.ts` (scrypt), `reset-token.ts`, `email.ts`
 (nodemailer), `steadfast.ts` (createOrder/statusByConsignment/getBalance), `format.ts` (taka/dt),
 `words.ts` (takaInWords), `export.ts` (CSV/Excel), `nav.ts` (nested nav tree),
-`settings.ts` (shop-wide Setting helpers — `getDeliveryCharges`/`saveDeliveryCharges`).
+`settings.ts` (shop-wide Setting helpers — `getDeliveryCharges`/`saveDeliveryCharges`),
+`courier.ts` (`applyCourierStatus` — COD auto-settle on delivery; `isParcelReturned`/`isCourierPending`).
+`sale-journal.ts` now also exports `postSaleReturnJournal` + `postDueCollectionJournal`.
 
 **Components (`src/components/`):** `Shell.tsx` (sidebar nav + header + theme toggle + Quick Access
 dropdown + user menu — logo links home), `InvoiceView.tsx` (A4/POS/Download invoice),
@@ -84,11 +86,16 @@ Everything compiles; nothing is mid-edit. Last commit deployed successfully.
 1. ✅ **RESOLVED — P&L missing 2 old sales:** CS-260728-0001 and -0002 were backfilled with sale
    journals (vouchers SAL-BF-0001/0002, dated to the original sale date). Trial balance reconciles
    (৳449,000 = ৳449,000). These were the only two unposted sales in the DB.
-2. **Customer document uploads** (NID/driving-license photos) — form has the fields but actual image
+2. ⚠️ **Exchanges don't post accounting journals** — same class of bug just fixed for sales returns.
+   `api/exchanges/route.ts` reverses/adds stock but never calls postJournal, so an exchange's revenue/
+   COGS delta and any diffAmount don't hit the P&L / Trial Balance. Needs a reversing+re-posting
+   journal like `postSaleReturnJournal`/`postSaleJournal`. (Sales returns, due collection, purchase
+   returns all post correctly now.)
+3. **Customer document uploads** (NID/driving-license photos) — form has the fields but actual image
    upload needs Supabase Storage (not built).
-3. **SMS module** — all screens are placeholders; real sending needs a Bangladeshi SMS gateway
+4. **SMS module** — all screens are placeholders; real sending needs a Bangladeshi SMS gateway
    (SSL Wireless / Alpha Net) API creds.
-4. **Loading speed** — improved via config-API browser caching, but floor is Netlify serverless
+5. **Loading speed** — improved via config-API browser caching, but floor is Netlify serverless
    cold-starts + Supabase Singapore latency.
 
 ## 6. Next Steps (in order)
@@ -133,5 +140,12 @@ Everything compiles; nothing is mid-edit. Last commit deployed successfully.
   Outside 120, now editable at **/config/delivery**) is **added to COD**; Steadfast's own merchant fee
   is separate/auto. Set webhook in the
   Steadfast portal to `https://exceltechpos.netlify.app/api/webhook/steadfast`.
+- **Courier COD dues are auto-settled** (`src/lib/courier.ts` `applyCourierStatus`). On Steadfast
+  status `delivered` the invoice's remaining due is auto-recorded as a CASH payment + Cash↔Receivable
+  journal and marked COMPLETED — fired from BOTH the webhook and the "Track parcel" button. While a
+  parcel is out for delivery its due is **hidden from Due Collection and can't be collected by hand**
+  (`isCourierPending`); it only reappears as a real due if the parcel is **returned** (status matches
+  `cancel|return` → `isParcelReturned`). A returned parcel does NOT auto-restock — owner runs a Sales
+  Return for that.
 - **Deploy flow:** `git add -A && git commit && git push` then `netlify deploy --build --prod`. Netlify
   blob-upload sometimes throws a transient "fetch failed" — just re-run the deploy.
