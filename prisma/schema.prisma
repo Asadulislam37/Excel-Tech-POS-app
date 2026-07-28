@@ -288,6 +288,15 @@ model Customer {
   altPhone     String?
   email        String?
   address      String?
+  familyName        String?
+  familyPhone       String?
+  referenceName     String?
+  referencePhone    String?
+  referenceRelation String?
+  profession        String?
+  designation       String?
+  organization      String?
+  imageUrl          String?
   openingDue   Decimal  @default(0) @db.Decimal(14, 2)
   rewardPoints Int      @default(0)
   rewardLevelId String?

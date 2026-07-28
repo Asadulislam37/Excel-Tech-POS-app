@@ -19,8 +19,13 @@ export const NAV: NavItem[] = [
       { label: "Stock Report", href: "/inventory/stock-report", built: true },
       { label: "Stock Report Detailed", href: "/inventory/stock-report-detailed", built: true },
       { label: "Stock Ledger Report", href: "/inventory/stock-ledger", built: true },
-      { label: "Stock Transfer", href: "/inventory/transfer", built: true },
-      { label: "Stock Transfer History", href: "/inventory/transfer-history", built: true },
+      {
+        label: "Stock Transfer", icon: "ShoppingCart",
+        children: [
+          { label: "Stock Transfer", href: "/inventory/transfer", built: true },
+          { label: "Stock Transfer History", href: "/inventory/transfer-history", built: true },
+        ],
+      },
       { label: "Serial Number Manage", href: "/inventory/serials", built: true },
     ],
   },
@@ -86,7 +91,7 @@ export const NAV: NavItem[] = [
     label: "CRM", icon: "Users",
     children: [
       { label: "Customers", href: "/customers", built: true },
-      { label: "Customer History", href: "/customers/history", phase: 2 },
+      { label: "Customer History", href: "/customers/history", built: true },
     ],
   },
   {
@@ -108,7 +113,7 @@ export const NAV: NavItem[] = [
     label: "Accounting", icon: "Calculator",
     children: [
       { label: "Daily Statement", href: "/accounting/daily", built: true },
-      { label: "Manage Journal", href: "/accounting/journal", phase: 4 },
+      { label: "Manage Journal", href: "/accounting/journal", built: true },
       { label: "Expense Voucher", href: "/accounting/expense", built: true },
       { label: "Due Collection", href: "/accounting/due-collection", built: true },
       { label: "Supplier Payment", href: "/accounting/supplier-payment", built: true },
