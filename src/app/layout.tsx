@@ -3,7 +3,7 @@ import "./globals.css";
 import Shell from "@/components/Shell";
 
 export const metadata: Metadata = {
-  title: "PulsePOS — Excel Tech",
+  title: "Excel Tech POS",
   description: "Retail ERP & POS for Excel Tech, Shyamoli Square",
 };
 

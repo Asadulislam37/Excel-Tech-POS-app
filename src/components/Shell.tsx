@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV, NavGroup, NavLeaf } from "@/lib/nav";
+import { NAV, NavGroup, NavLeaf, NavNode, isGroup } from "@/lib/nav";
 import {
   LayoutDashboard, ScanBarcode, Boxes, ShoppingCart, ClipboardList, FileText,
   RefreshCcw, PackagePlus, Users, MessageSquare, Calculator, ShieldCheck,
@@ -16,32 +16,57 @@ const ICONS: Record<string, React.ComponentType<{ size?: number; className?: str
   CalendarClock, Gift, Settings, BarChart3, Globe,
 };
 
-function isGroup(item: (typeof NAV)[number]): item is NavGroup {
-  return (item as NavGroup).children !== undefined;
+/** Does this branch contain the page we're on? Used to auto-expand on load. */
+function containsPath(node: NavNode, pathname: string): boolean {
+  if (isGroup(node)) return node.children.some((c) => containsPath(c, pathname));
+  return node.href !== "/" && pathname.startsWith(node.href);
 }
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname.startsWith("/shop")) return <>{children}</>;
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [mobileOpen, setMobileOpen] = useState(false);
+  if (pathname.startsWith("/shop")) return <>{children}</>;
 
-  const leaf = (l: NavLeaf, indent = false) => {
+  const leaf = (l: NavLeaf, depth: number) => {
     const active = pathname === l.href;
     return (
       <Link
-        key={l.href}
+        key={l.href + l.label}
         href={l.href}
         onClick={() => setMobileOpen(false)}
-        className={`flex items-center justify-between rounded-md px-3 py-1.5 text-[13px] transition-colors ${
-          indent ? "ml-7" : ""
-        } ${active ? "bg-teal text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}
+        style={{ paddingLeft: 12 + depth * 14 }}
+        className={`flex items-center justify-between rounded-md py-1.5 pr-3 text-[13px] transition-colors ${
+          active ? "bg-teal text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"
+        }`}
       >
         <span>{l.label}</span>
         {!l.built && l.phase && (
           <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-slate-400">P{l.phase}</span>
         )}
       </Link>
+    );
+  };
+
+  /** Sub-groups nest to any depth; the top level is rendered separately for its icon. */
+  const node = (n: NavNode, depth: number): React.ReactNode => {
+    if (!isGroup(n)) return leaf(n, depth);
+    const key = `${depth}:${n.label}`;
+    const expanded = open[key] ?? containsPath(n, pathname);
+    const Icon = n.icon ? ICONS[n.icon] : undefined;
+    return (
+      <div key={key}>
+        <button
+          onClick={() => setOpen((o) => ({ ...o, [key]: !expanded }))}
+          style={{ paddingLeft: 12 + depth * 14 }}
+          className="flex w-full items-center gap-2 rounded-md py-1.5 pr-3 text-[13px] font-semibold text-slate-200 hover:bg-white/5 hover:text-white"
+        >
+          {Icon && <Icon size={14} />}
+          {n.label}
+          <ChevronDown size={13} className={`ml-auto transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+        {expanded && <div className="space-y-0.5">{n.children.map((c) => node(c, depth + 1))}</div>}
+      </div>
     );
   };
 
@@ -58,8 +83,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <Store size={18} className="text-white" />
           </div>
           <div>
-            <div className="text-[15px] font-bold leading-tight text-white">PulsePOS</div>
-            <div className="text-[11px] text-slate-400">Excel Tech · Shyamoli</div>
+            <div className="text-[15px] font-bold leading-tight text-white">Excel Tech POS</div>
+            <div className="text-[11px] text-slate-400">Shyamoli Square, Dhaka</div>
           </div>
           <button className="ml-auto text-slate-400 lg:hidden" onClick={() => setMobileOpen(false)}>
             <X size={18} />
@@ -86,7 +111,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               );
             }
             const Icon = ICONS[item.icon];
-            const expanded = open[item.label] ?? item.children.some((c) => pathname.startsWith(c.href) && c.href !== "/");
+            const expanded = open[item.label] ?? containsPath(item, pathname);
             return (
               <div key={item.label}>
                 <button
@@ -97,7 +122,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                   {item.label}
                   <ChevronDown size={14} className={`ml-auto transition-transform ${expanded ? "rotate-180" : ""}`} />
                 </button>
-                {expanded && <div className="mb-1 space-y-0.5">{item.children.map((c) => leaf(c, true))}</div>}
+                {expanded && <div className="mb-1 space-y-0.5">{item.children.map((c) => node(c, 1))}</div>}
               </div>
             );
           })}

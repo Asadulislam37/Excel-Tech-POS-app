@@ -1,9 +1,12 @@
-// Full module tree for PulsePOS — mirrors the target feature set.
+// Module tree for Excel Tech POS.
 // built: true → working screen exists. phase → planned build phase.
 
 export type NavLeaf = { label: string; href: string; built?: boolean; phase?: number };
-export type NavGroup = { label: string; icon: string; children: NavLeaf[] };
-export type NavItem = NavLeaf & { icon: string } | NavGroup;
+export type NavGroup = { label: string; icon?: string; children: NavNode[] };
+export type NavNode = NavLeaf | NavGroup;
+export type NavItem = (NavLeaf & { icon: string }) | (NavGroup & { icon: string });
+
+export const isGroup = (n: NavNode): n is NavGroup => (n as NavGroup).children !== undefined;
 
 export const NAV: NavItem[] = [
   { label: "Dashboard", href: "/", icon: "LayoutDashboard", built: true },
@@ -37,38 +40,46 @@ export const NAV: NavItem[] = [
     ],
   },
   {
-    label: "Sales Requisition", icon: "ClipboardList",
-    children: [
-      { label: "Requisition", href: "/requisition", phase: 3 },
-      { label: "Requisition Pending", href: "/requisition/pending", phase: 3 },
-      { label: "Requisition History", href: "/requisition/history", phase: 3 },
-    ],
-  },
-  {
-    label: "Sales Quotation", icon: "FileText",
-    children: [
-      { label: "Quotation", href: "/quotation", phase: 3 },
-      { label: "Pending Quotation", href: "/quotation/pending", phase: 3 },
-      { label: "Quotation History", href: "/quotation/history", phase: 3 },
-    ],
-  },
-  {
     label: "Return & Exchange", icon: "RefreshCcw",
     children: [
-      { label: "Sales Return", href: "/returns/sale", phase: 2 },
-      { label: "Return History", href: "/returns/history", phase: 2 },
-      { label: "Return Products", href: "/returns/products", phase: 2 },
-      { label: "Sales Exchange", href: "/exchange", phase: 2 },
-      { label: "Exchange History", href: "/exchange/history", phase: 2 },
+      {
+        label: "Return", icon: "ShoppingCart",
+        children: [
+          { label: "Sales Return", href: "/returns/sale", built: true },
+          { label: "Return History", href: "/returns/history", built: true },
+          { label: "Return Products", href: "/returns/products", built: true },
+        ],
+      },
+      {
+        label: "Exchange", icon: "PackagePlus",
+        children: [
+          { label: "Sales Exchange", href: "/exchange", built: true },
+          { label: "Exchange History", href: "/exchange/history", built: true },
+          { label: "Exchange Products", href: "/exchange/products", built: true },
+          { label: "Return Products", href: "/exchange/return-products", built: true },
+        ],
+      },
     ],
   },
   {
     label: "Purchase & Return", icon: "PackagePlus",
     children: [
-      { label: "Purchase", href: "/purchase", built: true },
-      { label: "Purchase History", href: "/purchase/history", phase: 2 },
-      { label: "Purchase Products", href: "/purchase/products", phase: 2 },
-      { label: "Purchase Return", href: "/purchase/return", phase: 3 },
+      {
+        label: "Purchase", icon: "ShoppingCart",
+        children: [
+          { label: "Purchase", href: "/purchase", built: true },
+          { label: "Purchase History", href: "/purchase/history", built: true },
+          { label: "Purchase Products", href: "/purchase/products", built: true },
+        ],
+      },
+      {
+        label: "Purchase Return", icon: "FileText",
+        children: [
+          { label: "Purchase Return", href: "/purchase/return", built: true },
+          { label: "Return History", href: "/purchase/return/history", built: true },
+          { label: "Return Products", href: "/purchase/return/products", built: true },
+        ],
+      },
     ],
   },
   {
@@ -83,15 +94,20 @@ export const NAV: NavItem[] = [
     children: [
       { label: "SMS Dashboard", href: "/sms", phase: 4 },
       { label: "SMS Campaign", href: "/sms/campaign", phase: 4 },
-      { label: "SMS Log", href: "/sms/log", phase: 4 },
-      { label: "SMS Ledger", href: "/sms/ledger", phase: 4 },
+      {
+        label: "SMS Report", icon: "FileText",
+        children: [
+          { label: "SMS Payment History", href: "/sms/payments", phase: 4 },
+          { label: "SMS Log", href: "/sms/log", phase: 4 },
+          { label: "SMS Ledger", href: "/sms/ledger", phase: 4 },
+        ],
+      },
     ],
   },
   {
     label: "Accounting", icon: "Calculator",
     children: [
       { label: "Daily Statement", href: "/accounting/daily", built: true },
-      { label: "Cash Statement", href: "/accounting/daily", built: true },
       { label: "Manage Journal", href: "/accounting/journal", phase: 4 },
       { label: "Expense Voucher", href: "/accounting/expense", built: true },
       { label: "Due Collection", href: "/accounting/due-collection", built: true },
@@ -106,15 +122,6 @@ export const NAV: NavItem[] = [
   {
     label: "Warranty", icon: "ShieldCheck",
     children: [{ label: "Warranty Claim", href: "/warranty/claims", phase: 2 }],
-  },
-  {
-    label: "EMI", icon: "CalendarClock",
-    children: [
-      { label: "Create EMI Order", href: "/emi/create", phase: 3 },
-      { label: "EMI History", href: "/emi/history", phase: 3 },
-      { label: "Pending Installment", href: "/emi/pending", phase: 3 },
-      { label: "Payment History", href: "/emi/payments", phase: 3 },
-    ],
   },
   {
     label: "Rewards", icon: "Gift",
