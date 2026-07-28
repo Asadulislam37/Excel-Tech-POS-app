@@ -39,6 +39,7 @@ export default function PosPage() {
   const [remarks, setRemarks] = useState("");
   const [held, setHeld] = useState<{ id: string; cart: CartLine[]; label: string }[]>([]);
   const [showHold, setShowHold] = useState(false);
+  const [editId, setEditId] = useState("");
   const [payments, setPayments] = useState([{ method: "CASH", amount: 0, reference: "" }]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState("");
@@ -68,6 +69,44 @@ export default function PosPage() {
     }, 250);
     return () => clearTimeout(t);
   }, [custQ]);
+
+  // ?edit=<saleId> loads an existing invoice into the form for correction.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("edit");
+    if (!id) return;
+    (async () => {
+      const res = await fetch(`/api/sales/${id}`);
+      if (!res.ok) return setError("Could not load that invoice.");
+      const s = await res.json();
+      setEditId(id);
+      setSaleType(s.saleType);
+      setCustomerId(s.customerId ?? "");
+      setDiscount(Number(s.discount) || 0);
+      setAdditionalExpense(Number(s.additionalExpense) || 0);
+      setVat(Number(s.vat) || 0);
+      setWorkOrder(s.workOrder ?? "");
+      setRemarks(s.note ?? "");
+      setPayments(s.payments.length
+        ? s.payments.map((p: { method: string; amount: string; reference?: string }) =>
+            ({ method: p.method, amount: Number(p.amount), reference: p.reference ?? "" }))
+        : [{ method: "CASH", amount: 0, reference: "" }]);
+      setCart(s.items.map((i: {
+        variantId: string; quantity: number; unitPrice: string;
+        variant: { sku: string; color?: { name: string } | null; size?: { name: string } | null; product: { name: string; type: string } };
+        serialUnits: { id: string; serialNo: string }[];
+      }) => ({
+        variantId: i.variantId,
+        productName: i.variant.product.name,
+        variantLabel: [i.variant.color?.name, i.variant.size?.name].filter(Boolean).join(" · ") || i.variant.sku,
+        type: i.variant.product.type as Product["type"],
+        quantity: i.quantity,
+        unitPrice: Number(i.unitPrice),
+        serialUnits: i.serialUnits.map((u) => ({ id: u.id, serialNo: u.serialNo })),
+        // the units on this invoice are back in play while editing
+        maxStock: i.quantity + 9999,
+      })));
+    })();
+  }, []);
 
   const subTotal = useMemo(() => cart.reduce((s, l) => s + l.quantity * l.unitPrice, 0), [cart]);
   const totalQty = useMemo(() => cart.reduce((s, l) => s + l.quantity, 0), [cart]);
@@ -150,8 +189,8 @@ export default function PosPage() {
     setError("");
     setBusy(true);
     try {
-      const res = await fetch("/api/sales", {
-        method: "POST",
+      const res = await fetch(editId ? `/api/sales/${editId}` : "/api/sales", {
+        method: editId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerId: customerId || undefined,
@@ -176,7 +215,7 @@ export default function PosPage() {
       setCart([]); setDiscount(0); setDiscountPct(""); setAdditionalExpense(0); setVat(0);
       setWorkOrder(""); setRemarks("");
       setPayments([{ method: "CASH", amount: 0, reference: "" }]);
-      setCustomerId(""); loadProducts(q);
+      setCustomerId(""); setEditId(""); loadProducts(q);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sale failed.");
     } finally {
@@ -305,7 +344,10 @@ export default function PosPage() {
 
       {/* Cart side */}
       <div className="card flex h-fit flex-col p-4 lg:sticky lg:top-[72px]">
-        <h2 className="text-[15px] font-bold">Invoice Summary</h2>
+        <h2 className="text-[15px] font-bold">
+          Invoice Summary
+          {editId && <span className="ml-2 rounded bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-700">EDITING</span>}
+        </h2>
 
         {/* Sale type */}
         <div className="mt-3 grid grid-cols-3 gap-2">
@@ -443,9 +485,18 @@ export default function PosPage() {
 
         {error && <div className="mt-3 rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{error}</div>}
 
-        <button className="btn btn-primary mt-4 w-full py-3 text-[14px]" disabled={!cartValid || busy || (dueTotal > 0 && !customerId)} onClick={completeSale}>
-          {busy ? "Saving…" : `Place Order · ${taka(grandTotal)}`}
+        <button
+          className={`btn mt-4 w-full py-3 text-[14px] ${editId ? "text-white" : "btn-primary"}`}
+          style={editId ? { background: "#2563eb" } : undefined}
+          disabled={!cartValid || busy || (dueTotal > 0 && !customerId)}
+          onClick={completeSale}>
+          {busy ? "Saving…" : editId ? `Update Order · ${taka(grandTotal)}` : `Place Order · ${taka(grandTotal)}`}
         </button>
+        {editId && (
+          <a href="/sales/history" className="mt-2 text-center text-[12px] font-semibold text-muted hover:text-body">
+            Cancel edit
+          </a>
+        )}
       </div>
     </div>
 

@@ -1,25 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { taka, dt } from "@/lib/format";
 import { exportCsv, exportExcel } from "@/lib/export";
-import { Download, Eye, FileSpreadsheet, MoreHorizontal, Printer, X } from "lucide-react";
+import { Download, Eye, FileSpreadsheet, MessageSquare, MoreHorizontal, Pencil, Printer, Trash2, X } from "lucide-react";
 import SalesTabs from "@/components/SalesTabs";
+import InvoiceView, { InvoiceSale } from "@/components/InvoiceView";
 
 type Named = { id: string; name: string };
-type Sale = {
-  id: string; invoiceNo: string; saleType: string; workOrder?: string | null; note?: string | null;
-  subTotal: string; discount: string; additionalExpense: string; vat: string;
-  grandTotal: string; paidTotal: string; dueTotal: string; status: string; createdAt: string;
-  customer?: { name: string; phone: string; address?: string | null } | null;
-  outlet?: { name: string } | null;
-  payments: { method: string; amount: string; reference?: string | null }[];
-  items: {
-    quantity: number; unitPrice: string; lineTotal: string;
-    variant: { sku: string; product: { name: string } };
-    serialUnits: { serialNo: string }[];
-  }[];
-};
+type Sale = InvoiceSale & { status: string };
 type Data = { total: number; totalAmount: number; totalDue: number; rows: Sale[] };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -36,6 +26,11 @@ export default function SalesHistory() {
   const [cfg, setCfg] = useState<{ outlets: Named[] } | null>(null);
   const [view, setView] = useState<Sale | null>(null);
   const [menuFor, setMenuFor] = useState("");
+  const [confirmDel, setConfirmDel] = useState<Sale | null>(null);
+  const [sms, setSms] = useState<Sale | null>(null);
+  const [smsText, setSmsText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   const load = useCallback(async () => {
     const p = new URLSearchParams({ q, page: String(page) });
@@ -58,6 +53,28 @@ export default function SalesHistory() {
     s.customer?.name ?? "Walk-in", s.customer?.phone ?? "", TYPE_LABEL[s.saleType] ?? s.saleType,
     qtyOf(s), Number(s.grandTotal), Number(s.dueTotal),
   ]);
+
+  const openSms = (s: Sale) => {
+    setSmsText(
+      `Dear ${s.customer?.name ?? "Customer"}, thank you for your purchase at Excel Tech. ` +
+      `Invoice ${s.invoiceNo}, amount ${taka(s.grandTotal)}` +
+      (Number(s.dueTotal) > 0 ? `, due ${taka(s.dueTotal)}` : "") + "."
+    );
+    setSms(s);
+  };
+
+  const doDelete = async () => {
+    if (!confirmDel) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/sales/${confirmDel.id}`, { method: "DELETE" });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setConfirmDel(null);
+      load();
+    } catch (e) { alert(e instanceof Error ? e.message : "Delete failed."); }
+    finally { setBusy(false); }
+  };
 
   const printInvoice = (s: Sale) => {
     const w = window.open("", "_blank", "width=720,height=800");
@@ -158,12 +175,22 @@ export default function SalesHistory() {
                   {Number(s.dueTotal) > 0 && <div className="text-[11px] font-bold text-amber">due {taka(s.dueTotal)}</div>}</td>
                 <td className="td">
                   <div className="relative flex items-center justify-center gap-1.5">
-                    <button title="View" className="rounded-md bg-orange-100 p-2 text-orange-600 hover:bg-orange-200" onClick={() => setView(s)}><Eye size={14} /></button>
+                    <button title="View invoice" className="rounded-md bg-orange-100 p-2 text-orange-600 hover:bg-orange-200" onClick={() => setView(s)}><Eye size={14} /></button>
                     <button title="More" className="rounded-md bg-paper p-2 text-body hover:bg-line" onClick={() => setMenuFor(menuFor === s.id ? "" : s.id)}><MoreHorizontal size={14} /></button>
                     {menuFor === s.id && (
                       <div className="card absolute right-0 top-9 z-40 w-40 p-1 text-left shadow-lg">
-                        <button className="block w-full rounded-md px-3 py-2 text-left text-[13px] font-semibold hover:bg-paper" onClick={() => { setMenuFor(""); printInvoice(s); }}>Print invoice</button>
-                        <button className="block w-full rounded-md px-3 py-2 text-left text-[13px] hover:bg-paper" onClick={() => { setMenuFor(""); setView(s); }}>View details</button>
+                        <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold hover:bg-paper"
+                          onClick={() => { setMenuFor(""); router.push(`/sales/pos?edit=${s.id}`); }}>
+                          <Pencil size={13} /> Edit
+                        </button>
+                        <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold hover:bg-paper"
+                          onClick={() => { setMenuFor(""); openSms(s); }}>
+                          <MessageSquare size={13} /> Send SMS
+                        </button>
+                        <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold text-red hover:bg-redsoft"
+                          onClick={() => { setMenuFor(""); setConfirmDel(s); }}>
+                          <Trash2 size={13} /> Delete
+                        </button>
                       </div>
                     )}
                   </div>
@@ -185,47 +212,57 @@ export default function SalesHistory() {
         </div>
       )}
 
-      {view && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setView(null)}>
-          <div className="card max-h-[90vh] w-full max-w-2xl space-y-3 overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+      {view && <InvoiceView sale={view} onClose={() => setView(null)} />}
+
+      {/* Delete confirmation */}
+      {confirmDel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmDel(null)}>
+          <div className="card w-full max-w-sm space-y-4 p-7 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-redsoft">
+              <Trash2 size={30} className="text-red" />
+            </div>
+            <h3 className="text-xl font-extrabold">Are you sure?</h3>
+            <p className="text-[13px] text-muted">
+              Delete invoice <b className="font-mono">{confirmDel.invoiceNo}</b>? The sold items go back into stock
+              and any reward points are reversed.
+            </p>
+            <div className="flex justify-center gap-3">
+              <button className="btn btn-ghost px-6" onClick={() => setConfirmDel(null)}>Cancel</button>
+              <button className="btn px-6 text-white" style={{ background: "#2563eb" }} disabled={busy} onClick={doDelete}>
+                {busy ? "Deleting…" : "Submit Now"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send SMS */}
+      {sms && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSms(null)}>
+          <div className="card w-full max-w-md space-y-3 p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold">{view.invoiceNo}</h3>
-                <p className="text-[12px] text-muted">{dt(view.createdAt)} · {TYPE_LABEL[view.saleType] ?? view.saleType}</p>
-              </div>
-              <button onClick={() => setView(null)}><X size={17} /></button>
+              <h3 className="text-lg font-bold">Send SMS</h3>
+              <button onClick={() => setSms(null)}><X size={17} /></button>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-[13px]">
-              <div className="rounded-lg bg-paper px-3 py-2"><span className="text-muted">Customer</span><div className="font-semibold">{view.customer?.name ?? "Walk-in"}</div></div>
-              <div className="rounded-lg bg-paper px-3 py-2"><span className="text-muted">Phone</span><div className="font-semibold">{view.customer?.phone ?? "—"}</div></div>
+            <label className="block text-[12px] font-semibold text-muted">To
+              <input className="input mt-1 bg-paper" readOnly value={sms.customer?.phone ?? "No phone on this invoice"} />
+            </label>
+            <label className="block text-[12px] font-semibold text-muted">Message
+              <textarea className="input mt-1 min-h-28" value={smsText} onChange={(e) => setSmsText(e.target.value)} />
+            </label>
+            <div className="text-[11px] text-muted">{smsText.length} characters · {Math.ceil(smsText.length / 160) || 1} SMS</div>
+            <div className="rounded-md bg-ambersoft px-3 py-2 text-[12px] font-semibold text-amber">
+              No SMS gateway is connected yet, so this can&apos;t send automatically. Copy the text or open it in your phone app.
             </div>
-            <table className="w-full">
-              <thead><tr><th className="th">Product</th><th className="th text-right">Qty</th><th className="th text-right">Price</th><th className="th text-right">Total</th></tr></thead>
-              <tbody>
-                {view.items.map((i, k) => (
-                  <tr key={k}>
-                    <td className="td">{i.variant.product.name}
-                      {i.serialUnits.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{i.serialUnits.map((u) => <span key={u.serialNo} className="serial-chip">{u.serialNo}</span>)}</div>}
-                    </td>
-                    <td className="td text-right">{i.quantity}</td>
-                    <td className="td text-right">{taka(i.unitPrice)}</td>
-                    <td className="td text-right font-semibold">{taka(i.lineTotal)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="space-y-1 border-t border-line pt-3 text-[13px]">
-              <div className="flex justify-between"><span className="text-muted">Sub total</span><span>{taka(view.subTotal)}</span></div>
-              {Number(view.discount) > 0 && <div className="flex justify-between"><span className="text-muted">Discount</span><span>−{taka(view.discount)}</span></div>}
-              {Number(view.additionalExpense) > 0 && <div className="flex justify-between"><span className="text-muted">Additional expense</span><span>{taka(view.additionalExpense)}</span></div>}
-              {Number(view.vat) > 0 && <div className="flex justify-between"><span className="text-muted">VAT</span><span>{taka(view.vat)}</span></div>}
-              <div className="flex justify-between text-[15px] font-bold"><span>Total payable</span><span>{taka(view.grandTotal)}</span></div>
-              <div className="flex justify-between"><span className="text-muted">Paid</span><span>{taka(view.paidTotal)}</span></div>
-              {Number(view.dueTotal) > 0 && <div className="flex justify-between font-bold text-amber"><span>Due</span><span>{taka(view.dueTotal)}</span></div>}
-              <div className="text-[12px] text-muted">Paid via {view.payments.map((p) => `${p.method} ${taka(p.amount)}`).join(", ") || "—"}</div>
-              {view.note && <div className="rounded-lg bg-paper px-3 py-2 text-[12px]">{view.note}</div>}
+            <div className="flex gap-2">
+              <button className="btn btn-ghost flex-1" onClick={() => { navigator.clipboard.writeText(smsText); setSms(null); }}>
+                Copy text
+              </button>
+              <a className="btn btn-primary flex-1" href={`sms:${sms.customer?.phone ?? ""}?body=${encodeURIComponent(smsText)}`}
+                onClick={() => setSms(null)}>
+                Open in SMS app
+              </a>
             </div>
-            <button className="btn btn-primary w-full" onClick={() => printInvoice(view)}><Printer size={15} /> Print Invoice</button>
           </div>
         </div>
       )}
