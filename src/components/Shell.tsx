@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NAV, NavGroup, NavLeaf, NavNode, isGroup } from "@/lib/nav";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   LayoutDashboard, ScanBarcode, Boxes, ShoppingCart, ClipboardList, FileText,
   RefreshCcw, PackagePlus, Users, MessageSquare, Calculator, ShieldCheck,
@@ -175,6 +176,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <Link href="/sales/pos" className="btn btn-primary h-9">
               <ShoppingCart size={15} /> New Invoice
             </Link>
+
+            <ThemeToggle />
 
             {/* Quick Access */}
             <div className="relative">

@@ -5,6 +5,7 @@
   --ink-2: #1a222c;
   --paper: #f3f5f7;
   --card: #ffffff;
+  --field: #ffffff;
   --line: #e3e8ee;
   --teal: #0d7a72;
   --teal-dark: #0a5f59;
@@ -15,6 +16,29 @@
   --red-soft: #fdecec;
   --text: #1b2430;
   --muted: #67737f;
+  --chip-border: #bcdcd8;
+  color-scheme: light;
+}
+
+/* Dark theme — softer on the eyes. Toggled via data-theme on <html>. */
+:root[data-theme="dark"] {
+  --ink: #0b0f14;
+  --ink-2: #131a22;
+  --paper: #0f151c;
+  --card: #171f28;
+  --field: #1e2833;
+  --line: #2a3540;
+  --teal: #14b8a6;
+  --teal-dark: #0f9488;
+  --teal-soft: #10312e;
+  --amber: #f59e0b;
+  --amber-soft: #3a2c14;
+  --red: #f87171;
+  --red-soft: #3a1d1d;
+  --text: #e6eaef;
+  --muted: #94a3b0;
+  --chip-border: #1f4a44;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -54,7 +78,7 @@ body {
     letter-spacing: 0.04em;
     background: var(--teal-soft);
     color: var(--teal-dark);
-    border: 1px solid #bcdcd8;
+    border: 1px solid var(--chip-border);
     border-radius: 6px;
     padding: 2px 8px;
     display: inline-flex;
@@ -75,7 +99,7 @@ body {
   .btn:disabled { opacity: .5; cursor: not-allowed; }
   .input {
     width: 100%; border: 1px solid var(--line); border-radius: 10px;
-    padding: 9px 12px; background: #fff; font-size: 14px; outline: none;
+    padding: 9px 12px; background: var(--field); color: var(--text); font-size: 14px; outline: none;
   }
   .input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
   .th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 10px 12px; }
