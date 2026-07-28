@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { currentUser } from "@/lib/auth";
+import { postSaleJournal } from "@/lib/sale-journal";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +216,14 @@ export async function POST(req: NextRequest) {
           },
         });
       }
+
+      // Accounting: revenue + cost of goods sold, so the P&L reflects the sale.
+      const cogs = prepared.reduce((s, { item, variant }) => s + Number(variant.costPrice) * item.quantity, 0);
+      await postSaleJournal(tx, {
+        saleId: sale.id, invoiceNo,
+        grandTotal: Number(grandTotal), dueTotal: Number(dueTotal), cogs,
+        payments: payments.map((p) => ({ method: p.method, amount: Number(p.amount) })),
+      });
 
       // Reward points
       if (customerId) {

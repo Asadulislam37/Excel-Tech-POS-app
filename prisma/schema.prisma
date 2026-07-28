@@ -358,6 +358,9 @@ model Sale {
   status      SaleStatus @default(COMPLETED)
   isEmi       Boolean    @default(false)
   note        String?
+  courierConsignmentId String?
+  courierTracking      String?
+  courierStatus        String?
   createdAt   DateTime   @default(now())
 
   items       SaleItem[]

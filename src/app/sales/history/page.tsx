@@ -4,12 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { taka, dt } from "@/lib/format";
 import { exportCsv, exportExcel } from "@/lib/export";
-import { Download, Eye, FileSpreadsheet, MessageSquare, MoreHorizontal, Pencil, Printer, Trash2, X } from "lucide-react";
+import { Download, Eye, FileSpreadsheet, MessageSquare, MoreHorizontal, Pencil, Printer, Trash2, Truck, X } from "lucide-react";
 import SalesTabs from "@/components/SalesTabs";
 import InvoiceView, { InvoiceSale } from "@/components/InvoiceView";
 
 type Named = { id: string; name: string };
-type Sale = InvoiceSale & { status: string };
+type Sale = InvoiceSale & { status: string; courierConsignmentId?: string | null; courierTracking?: string | null; courierStatus?: string | null };
 type Data = { total: number; totalAmount: number; totalDue: number; rows: Sale[] };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -29,8 +29,30 @@ export default function SalesHistory() {
   const [confirmDel, setConfirmDel] = useState<Sale | null>(null);
   const [sms, setSms] = useState<Sale | null>(null);
   const [smsText, setSmsText] = useState("");
+  const [courier, setCourier] = useState<Sale | null>(null);
+  const [courierNote, setCourierNote] = useState("");
+  const [courierMsg, setCourierMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+
+  const sendToCourier = async () => {
+    if (!courier) return;
+    setBusy(true); setCourierMsg("");
+    try {
+      const res = await fetch("/api/steadfast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saleId: courier.id, note: courierNote }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setCourier(null); setCourierNote(""); load();
+    } catch (e) { setCourierMsg(e instanceof Error ? e.message : "Failed."); }
+    finally { setBusy(false); }
+  };
+
+  const refreshCourier = async (s: Sale) => {
+    const res = await fetch(`/api/steadfast?saleId=${s.id}`);
+    const d = await res.json();
+    alert(res.ok ? `Parcel ${s.courierTracking}\nStatus: ${d.status}` : (d.error || "Could not fetch status."));
+    load();
+  };
 
   const load = useCallback(async () => {
     const p = new URLSearchParams({ q, page: String(page) });
@@ -187,6 +209,17 @@ export default function SalesHistory() {
                           onClick={() => { setMenuFor(""); openSms(s); }}>
                           <MessageSquare size={13} /> Send SMS
                         </button>
+                        {s.courierTracking ? (
+                          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold hover:bg-paper"
+                            onClick={() => { setMenuFor(""); refreshCourier(s); }}>
+                            <Truck size={13} /> Track parcel
+                          </button>
+                        ) : (
+                          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold hover:bg-paper"
+                            onClick={() => { setMenuFor(""); setCourier(s); }}>
+                            <Truck size={13} /> Send to Courier
+                          </button>
+                        )}
                         <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-semibold text-red hover:bg-redsoft"
                           onClick={() => { setMenuFor(""); setConfirmDel(s); }}>
                           <Trash2 size={13} /> Delete
@@ -236,6 +269,33 @@ export default function SalesHistory() {
         </div>
       )}
 
+      {/* Send to Courier */}
+      {courier && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setCourier(null)}>
+          <div className="card w-full max-w-md space-y-3 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-lg font-bold"><Truck size={18} /> Send to Steadfast</h3>
+              <button onClick={() => setCourier(null)}><X size={17} /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[13px]">
+              <Info label="Invoice" value={courier.invoiceNo} />
+              <Info label="Customer" value={courier.customer?.name ?? "—"} />
+              <Info label="Phone" value={courier.customer?.phone ?? "—"} />
+              <Info label="COD (due)" value={taka(courier.dueTotal)} />
+            </div>
+            <div className="rounded-lg bg-paper px-3 py-2 text-[12px]"><span className="text-muted">Address:</span> {courier.customer?.address ?? "— (required)"}</div>
+            <label className="block text-[12px] font-semibold text-muted">Delivery note (optional)
+              <input className="input mt-1" placeholder="e.g. Call before delivery" value={courierNote} onChange={(e) => setCourierNote(e.target.value)} />
+            </label>
+            <div className="rounded-md bg-ambersoft px-3 py-2 text-[12px] font-semibold text-amber">
+              Steadfast will collect <b>{taka(courier.dueTotal)}</b> as Cash-on-Delivery. Phone must be 11 digits and address is required.
+            </div>
+            {courierMsg && <div className="rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{courierMsg}</div>}
+            <button className="btn btn-primary w-full py-3" disabled={busy} onClick={sendToCourier}>{busy ? "Creating parcel…" : "Create Parcel"}</button>
+          </div>
+        </div>
+      )}
+
       {/* Send SMS */}
       {sms && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSms(null)}>
@@ -268,4 +328,8 @@ export default function SalesHistory() {
       )}
     </div>
   );
+}
+
+function Info({ label, value }: { label: string; value?: string | null }) {
+  return <div className="rounded-lg bg-paper px-3 py-2"><div className="text-[11px] text-muted">{label}</div><div className="font-semibold">{value || "—"}</div></div>;
 }

@@ -14,7 +14,11 @@ export async function GET() {
     prisma.supplier.findMany({ orderBy: { name: "asc" } }),
     prisma.outlet.findMany({ orderBy: { name: "asc" } }),
   ]);
-  return NextResponse.json({ brands, categories, colors, sizes, units, warranties, suppliers, outlets });
+  // Config changes rarely — let the browser reuse it across page navigations.
+  return NextResponse.json(
+    { brands, categories, colors, sizes, units, warranties, suppliers, outlets },
+    { headers: { "Cache-Control": "private, max-age=120" } }
+  );
 }
 
 // POST /api/config { kind: "brand"|"category"|"color"|"size"|"unit"|"warranty", name, durationDays? }

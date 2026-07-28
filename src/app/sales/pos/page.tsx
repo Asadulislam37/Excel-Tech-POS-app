@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { taka } from "@/lib/format";
 import { Search, Plus, Trash2, ScanBarcode, X, Printer, CheckCircle2, UserPlus, PauseCircle } from "lucide-react";
 import SalesTabs from "@/components/SalesTabs";
+import InvoiceView, { InvoiceSale } from "@/components/InvoiceView";
 
 type Variant = {
   id: string; sku: string; salePrice: string; costPrice: string;
@@ -50,6 +51,7 @@ export default function PosPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ invoiceNo: string; grandTotal: string; dueTotal: string } | null>(null);
+  const [invoiceSale, setInvoiceSale] = useState<InvoiceSale | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const loadProducts = useCallback(async (query: string) => {
@@ -212,6 +214,9 @@ export default function PosPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setDone({ invoiceNo: data.invoiceNo, grandTotal: data.grandTotal, dueTotal: data.dueTotal });
+      // Show the full printable invoice (same as Sold History).
+      const full = await fetch(`/api/sales/${data.id}`).then((r) => (r.ok ? r.json() : null));
+      if (full) setInvoiceSale(full);
       setCart([]); setDiscount(0); setDiscountPct(""); setAdditionalExpense(0); setVat(0);
       setWorkOrder(""); setRemarks("");
       setPayments([{ method: "CASH", amount: 0, reference: "" }]);
@@ -227,28 +232,22 @@ export default function PosPage() {
     cart.length > 0 &&
     cart.every((l) => l.quantity > 0 && (l.type !== "SERIALIZED" || l.serialUnits.length === l.quantity));
 
+  const newSale = () => { setDone(null); setInvoiceSale(null); searchRef.current?.focus(); };
+
   if (done) {
     return (
-      <div className="mx-auto max-w-md">
-        <div className="card p-8 text-center">
-          <CheckCircle2 size={44} className="mx-auto text-teal" />
-          <h2 className="mt-3 text-lg font-bold">Invoice created</h2>
-          <div className="mt-1 font-mono text-sm text-muted">{done.invoiceNo}</div>
-          <div className="mt-4 text-3xl font-bold">{taka(done.grandTotal)}</div>
-          {Number(done.dueTotal) > 0 && (
-            <div className="mt-2 inline-block rounded-md bg-ambersoft px-3 py-1 text-sm font-semibold text-amber">
-              Due: {taka(done.dueTotal)}
-            </div>
-          )}
-          <div className="mt-6 flex justify-center gap-3">
-            <button className="btn btn-ghost" onClick={() => window.print()}>
-              <Printer size={15} /> Print receipt
-            </button>
-            <button className="btn btn-primary" onClick={() => { setDone(null); searchRef.current?.focus(); }}>
-              New sale
-            </button>
+      <div className="space-y-3">
+        <div className="mx-auto max-w-md">
+          <div className="card p-6 text-center">
+            <CheckCircle2 size={40} className="mx-auto text-teal" />
+            <h2 className="mt-2 text-lg font-bold">Order placed</h2>
+            <div className="mt-1 font-mono text-sm text-muted">{done.invoiceNo}</div>
+            <div className="mt-2 text-2xl font-bold">{taka(done.grandTotal)}</div>
+            {Number(done.dueTotal) > 0 && <div className="mt-2 inline-block rounded-md bg-ambersoft px-3 py-1 text-sm font-semibold text-amber">Due: {taka(done.dueTotal)}</div>}
+            <div className="mt-4"><button className="btn btn-primary" onClick={newSale}>+ New Sale</button></div>
           </div>
         </div>
+        {invoiceSale && <InvoiceView sale={invoiceSale} onClose={newSale} />}
       </div>
     );
   }

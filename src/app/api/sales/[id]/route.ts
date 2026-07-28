@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { postSaleJournal } from "@/lib/sale-journal";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,10 @@ async function reverseSale(tx: Prisma.TransactionClient, saleId: string) {
   }
 
   await tx.stockLedger.deleteMany({ where: { refType: "Sale", refId: saleId } });
+
+  // Void the sale's accounting journal.
+  const journal = await tx.journalEntry.findFirst({ where: { refType: "Sale", refId: saleId } });
+  if (journal) await tx.journalEntry.delete({ where: { id: journal.id } });
 
   // Claw back reward points granted for this sale.
   const points = await tx.rewardPointHistory.findMany({ where: { saleId } });
@@ -195,6 +200,14 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           data: { saleId: id, method: p.method as never, amount: p.amount, reference: p.reference || undefined },
         });
       }
+
+      // Re-post the accounting journal for the edited invoice.
+      const cogs = prepared.reduce((s, { item, variant }) => s + Number(variant.costPrice) * item.quantity, 0);
+      await postSaleJournal(tx, {
+        saleId: id, invoiceNo: old.invoiceNo,
+        grandTotal: Number(grandTotal), dueTotal: Number(dueTotal), cogs,
+        payments: payments.map((p) => ({ method: p.method, amount: Number(p.amount) })),
+      });
 
       return tx.sale.findUniqueOrThrow({ where: { id }, include: FULL });
     }, { timeout: 30000 });
