@@ -1,0 +1,55 @@
+// Meta (Facebook Messenger + WhatsApp Cloud API) helpers: webhook verification,
+// payload signature checking, and sending replies via the Graph API.
+import crypto from "node:crypto";
+
+const GRAPH = `https://graph.facebook.com/${process.env.META_GRAPH_VERSION || "v21.0"}`;
+
+// GET webhook verification handshake (Meta calls this when you save the webhook).
+export function checkVerifyToken(mode: string | null, token: string | null): boolean {
+  return mode === "subscribe" && !!token && token === process.env.META_VERIFY_TOKEN;
+}
+
+// Verify the X-Hub-Signature-256 header so we only act on payloads from Meta.
+export function verifyMetaSignature(rawBody: string, header: string | null): boolean {
+  const secret = process.env.META_APP_SECRET;
+  if (!secret || !header || !header.startsWith("sha256=")) return false;
+  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// Messenger allows ~2000 chars/message; WhatsApp ~4096. Keep replies safely under.
+const clip = (text: string, max: number) => (text.length > max ? text.slice(0, max - 1) + "…" : text);
+
+export async function sendMessengerText(psid: string, text: string): Promise<void> {
+  const token = process.env.MESSENGER_PAGE_TOKEN;
+  if (!token) return void console.error("[messenger] MESSENGER_PAGE_TOKEN not set");
+  const res = await fetch(`${GRAPH}/me/messages?access_token=${encodeURIComponent(token)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: psid },
+      messaging_type: "RESPONSE",
+      message: { text: clip(text, 1900) },
+    }),
+  });
+  if (!res.ok) console.error("[messenger] send failed", res.status, await res.text().catch(() => ""));
+}
+
+export async function sendWhatsAppText(to: string, text: string): Promise<void> {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneId) return void console.error("[whatsapp] WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID not set");
+  const res = await fetch(`${GRAPH}/${phoneId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      text: { body: clip(text, 4000) },
+    }),
+  });
+  if (!res.ok) console.error("[whatsapp] send failed", res.status, await res.text().catch(() => ""));
+}
