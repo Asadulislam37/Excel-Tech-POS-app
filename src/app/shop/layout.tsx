@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ShoppingBag, Store } from "lucide-react";
 import { cartCount } from "@/lib/cart";
+import ShopChatWidget from "@/components/ShopChatWidget";
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
   const [count, setCount] = useState(0);
@@ -40,6 +41,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
       <footer className="mt-10 border-t border-line bg-card py-8 text-center text-[12px] text-muted">
         Excel Tech · Shyamoli Square Shopping Mall, Dhaka · All phones come with official warranty
       </footer>
+      <ShopChatWidget />
     </div>
   );
 }

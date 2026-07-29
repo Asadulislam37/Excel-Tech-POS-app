@@ -9,7 +9,7 @@ import {
   LayoutDashboard, ScanBarcode, Boxes, ShoppingCart, ClipboardList, FileText,
   RefreshCcw, PackagePlus, Users, MessageSquare, Calculator, ShieldCheck,
   CalendarClock, Gift, Settings, BarChart3, ChevronDown, Menu, X, Store, Globe, LogOut,
-  LayoutGrid, FilePlus2, RotateCcw, DollarSign, HandCoins, ArrowUpRight,
+  LayoutGrid, FilePlus2, RotateCcw, DollarSign, HandCoins, ArrowUpRight, Bot,
 } from "lucide-react";
 
 // Header "Quick Access" shortcuts.
@@ -25,7 +25,7 @@ const QUICK = [
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   LayoutDashboard, ScanBarcode, Boxes, ShoppingCart, ClipboardList, FileText,
   RefreshCcw, PackagePlus, Users, MessageSquare, Calculator, ShieldCheck,
-  CalendarClock, Gift, Settings, BarChart3, Globe,
+  CalendarClock, Gift, Settings, BarChart3, Globe, Bot,
 };
 
 /** Does this branch contain the page we're on? Used to auto-expand on load. */

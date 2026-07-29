@@ -11,6 +11,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@google/genai@^2.13.0",
         "npm:@prisma/adapter-pg@^7.9.0",
         "npm:@prisma/client@^7.9.0",
         "npm:@tailwindcss/postcss@4",

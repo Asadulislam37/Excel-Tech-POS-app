@@ -1,0 +1,215 @@
+// Tool definitions (Gemini function declarations) + their server-side executors.
+// Each tool reuses the app's shared libs — it never re-implements stock/order
+// logic, so the agent obeys the exact same rules as the storefront and POS.
+import { Type } from "@google/genai";
+import type { AgentTool } from "@/lib/agent/run";
+import { agentSearchCatalog, agentGetVariant } from "@/lib/catalog";
+import { createOnlineOrder, OrderError, type CreateOnlineOrderInput } from "@/lib/online-order";
+import { getDeliveryCharges } from "@/lib/settings";
+import { businessSummary, lowStock, deadStock, topProducts } from "@/lib/agent/metrics";
+
+// ── Customer tools ────────────────────────────────────────────────────────────
+
+const searchCatalog: AgentTool = {
+  declaration: {
+    name: "search_catalog",
+    description:
+      "Search the published online store for products by name, brand, model, category, or SKU. " +
+      "Returns products with their variants, live stock, and price. Use this to answer " +
+      "availability, colour, and price questions. Always search before quoting a price or stock.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: {
+          type: Type.STRING,
+          description: "What the customer is looking for, e.g. 'Vivo X300 Pro cover' or 'iPhone 16 case'.",
+        },
+        limit: { type: Type.INTEGER, description: "Max products to return (default 8)." },
+      },
+      required: ["query"],
+    },
+  },
+  run: async (args) =>
+    agentSearchCatalog(String(args.query ?? ""), { limit: Number(args.limit) || undefined }),
+};
+
+const getVariant: AgentTool = {
+  declaration: {
+    name: "get_variant",
+    description:
+      "Get the live stock and price for one specific variant by its variantId (from search_catalog). " +
+      "Call this to confirm a variant is in stock right before placing an order.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { variantId: { type: Type.STRING, description: "The variantId to check." } },
+      required: ["variantId"],
+    },
+  },
+  run: async (args) => {
+    const v = await agentGetVariant(String(args.variantId ?? ""));
+    return v ?? { error: "No such variant, or it is not available online." };
+  },
+};
+
+const deliveryCharges: AgentTool = {
+  declaration: {
+    name: "delivery_charges",
+    description:
+      "Get the shop's delivery charges (Inside Dhaka / Outside Dhaka), in BDT taka. " +
+      "Use this when quoting a total that includes delivery.",
+    parameters: { type: Type.OBJECT, properties: {} },
+  },
+  run: async () => getDeliveryCharges(),
+};
+
+const placeOrder: AgentTool = {
+  declaration: {
+    name: "place_order",
+    description:
+      "Place a Cash-on-Delivery or prepaid online order for the customer. Only call this after the " +
+      "customer has confirmed the exact product(s), their name, phone, full address, and area. " +
+      "Prices come from the database automatically — you do not set them. Returns an order number.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        customerName: { type: Type.STRING, description: "Customer's full name." },
+        phone: { type: Type.STRING, description: "11-digit Bangladeshi phone, starts 01." },
+        address: { type: Type.STRING, description: "Full delivery address." },
+        area: {
+          type: Type.STRING,
+          enum: ["INSIDE_DHAKA", "OUTSIDE_DHAKA"],
+          description: "Delivery zone (affects delivery charge).",
+        },
+        payMethod: {
+          type: Type.STRING,
+          enum: ["COD", "BKASH", "NAGAD"],
+          description: "COD = cash on delivery. BKASH/NAGAD require a payReference.",
+        },
+        payReference: {
+          type: Type.STRING,
+          description: "bKash/Nagad transaction ID — required if payMethod is BKASH or NAGAD.",
+        },
+        note: { type: Type.STRING, description: "Optional order note." },
+        items: {
+          type: Type.ARRAY,
+          description: "The variants to order.",
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              variantId: { type: Type.STRING, description: "variantId from search_catalog." },
+              quantity: { type: Type.INTEGER, description: "How many (1–5)." },
+            },
+            required: ["variantId", "quantity"],
+          },
+        },
+      },
+      required: ["customerName", "phone", "address", "area", "payMethod", "items"],
+    },
+  },
+  run: async (args) => {
+    try {
+      const order = await createOnlineOrder(args as unknown as CreateOnlineOrderInput);
+      return {
+        ok: true,
+        orderNo: order.orderNo,
+        grandTotal: Number(order.grandTotal),
+        deliveryCharge: Number(order.deliveryCharge),
+        status: order.status,
+        message: `Order ${order.orderNo} placed. Total ৳${Number(order.grandTotal)} (incl. delivery).`,
+      };
+    } catch (e) {
+      if (e instanceof OrderError) return { ok: false, error: e.message };
+      throw e;
+    }
+  },
+};
+
+const requestHuman: AgentTool = {
+  declaration: {
+    name: "request_human",
+    description:
+      "Hand the conversation over to a human staff member when you cannot help, the customer asks " +
+      "for a person, or the request is a complaint/negotiation beyond stock and orders.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        reason: { type: Type.STRING, description: "Short reason for the handoff." },
+      },
+      required: ["reason"],
+    },
+  },
+  // Handoff delivery (owner notification) is wired up with the messaging
+  // channels. For now, acknowledge so the agent tells the customer politely.
+  run: async (args) => ({
+    ok: true,
+    handedOff: true,
+    reason: String(args.reason ?? ""),
+    message: "A staff member will follow up with the customer shortly.",
+  }),
+};
+
+export const customerTools: AgentTool[] = [
+  searchCatalog,
+  getVariant,
+  deliveryCharges,
+  placeOrder,
+  requestHuman,
+];
+
+// ── Owner tools ───────────────────────────────────────────────────────────────
+
+const businessSummaryTool: AgentTool = {
+  declaration: {
+    name: "business_summary",
+    description:
+      "Get today's and this month's sales: order count, revenue, amount paid, amount due, and gross " +
+      "profit (all in BDT). Use for 'how are sales today', 'today's profit', etc.",
+    parameters: { type: Type.OBJECT, properties: {} },
+  },
+  run: async () => businessSummary(),
+};
+
+const lowStockTool: AgentTool = {
+  declaration: {
+    name: "low_stock",
+    description: "List product variants at or below their reorder level (need restocking).",
+    parameters: { type: Type.OBJECT, properties: {} },
+  },
+  run: async () => lowStock(),
+};
+
+const deadStockTool: AgentTool = {
+  declaration: {
+    name: "dead_stock",
+    description:
+      "List in-stock variants that have NOT sold in the last N days (dead stock / not selling).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { days: { type: Type.INTEGER, description: "Look-back window in days (default 30)." } },
+    },
+  },
+  run: async (args) => deadStock(Number(args.days) || 30),
+};
+
+const topProductsTool: AgentTool = {
+  declaration: {
+    name: "top_products",
+    description: "List the best-selling variants (by units sold) over the last N days.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        days: { type: Type.INTEGER, description: "Look-back window in days (default 30)." },
+        limit: { type: Type.INTEGER, description: "How many to return (default 10)." },
+      },
+    },
+  },
+  run: async (args) => topProducts(Number(args.days) || 30, Number(args.limit) || 10),
+};
+
+export const ownerTools: AgentTool[] = [
+  businessSummaryTool,
+  lowStockTool,
+  deadStockTool,
+  topProductsTool,
+  searchCatalog, // owners can also look up stock/price
+];

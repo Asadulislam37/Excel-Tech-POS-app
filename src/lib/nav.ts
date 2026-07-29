@@ -10,6 +10,7 @@ export const isGroup = (n: NavNode): n is NavGroup => (n as NavGroup).children !
 
 export const NAV: NavItem[] = [
   { label: "Dashboard", href: "/", icon: "LayoutDashboard", built: true },
+  { label: "AI Assistant", href: "/assistant", icon: "Bot", built: true },
   { label: "Serial Number Track", href: "/serials/track", icon: "ScanBarcode", built: true },
   {
     label: "Inventory", icon: "Boxes",
