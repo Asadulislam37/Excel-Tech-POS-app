@@ -3,7 +3,7 @@ import DateInput from "@/components/DateInput";
 
 import { useCallback, useEffect, useState } from "react";
 import { taka, dt } from "@/lib/format";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import { Download, FileSpreadsheet, Plus, Printer, X } from "lucide-react";
 
 type Account = { id: string; code: string; name: string; type: string };
@@ -81,7 +81,7 @@ export default function ExpenseVoucherPage() {
         </div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("expenses", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("expenses", HEAD, sheet())}><Download size={16} /></button>
+          <button className="btn btn-ghost px-3" title="Download PDF" onClick={() => exportPdf("expenses", HEAD, sheet(), "Expense Voucher")}><Download size={16} /></button>
           <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>

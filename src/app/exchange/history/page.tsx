@@ -3,7 +3,7 @@ import DateInput from "@/components/DateInput";
 
 import { useCallback, useEffect, useState } from "react";
 import { taka, dt } from "@/lib/format";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
 
 type Row = {
@@ -64,7 +64,7 @@ export default function ExchangeHistoryPage() {
         </div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("exchange-history", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("exchange-history", HEAD, sheet())}><Download size={16} /></button>
+          <button className="btn btn-ghost px-3" title="Download PDF" onClick={() => exportPdf("exchange-history", HEAD, sheet(), "Exchange History")}><Download size={16} /></button>
           <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>

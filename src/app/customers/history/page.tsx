@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { taka } from "@/lib/format";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
 
 type Customer = {
@@ -40,7 +40,7 @@ export default function CustomerHistoryPage() {
         <div className="min-w-[160px] flex-1 basis-[220px]"><input className="input" placeholder="Search name, phone or organization…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("customer-history", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("customer-history", HEAD, sheet())}><Download size={16} /></button>
+          <button className="btn btn-ghost px-3" title="Download PDF" onClick={() => exportPdf("customer-history", HEAD, sheet(), "Customer History")}><Download size={16} /></button>
           <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>

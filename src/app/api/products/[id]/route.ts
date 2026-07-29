@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       return NextResponse.json({ ok: true });
     }
 
-    const { name, brandId, categoryId, unitId, warrantyPolicyId, variants } = body;
+    const { name, brandId, categoryId, unitId, warrantyPolicyId, imageUrl, variants } = body;
     if (name !== undefined && !String(name).trim()) throw new Error("Product name cannot be empty.");
 
     const product = await prisma.$transaction(async (tx) => {
@@ -83,6 +83,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           ...(categoryId !== undefined && { categoryId: categoryId || null }),
           ...(unitId !== undefined && { unitId: unitId || null }),
           ...(warrantyPolicyId !== undefined && { warrantyPolicyId: warrantyPolicyId || null }),
+          ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
         },
       });
       for (const v of variants ?? []) {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { taka, dt } from "@/lib/format";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import { Download, Eye, FileSpreadsheet, MessageSquare, MoreHorizontal, Pencil, Printer, Trash2, Truck, X } from "lucide-react";
 import SalesTabs from "@/components/SalesTabs";
 import InvoiceView, { InvoiceSale } from "@/components/InvoiceView";
@@ -197,7 +197,7 @@ export default function SalesHistory() {
         <Cell><DateInput value={date} onChange={(e) => setDate(e.target.value)} /></Cell>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("sold-history", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("sold-history", HEAD, sheet())}><Download size={16} /></button>
+          <button className="btn btn-ghost px-3" title="Download PDF" onClick={() => exportPdf("sold-history", HEAD, sheet(), "Sold History")}><Download size={16} /></button>
           <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>

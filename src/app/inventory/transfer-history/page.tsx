@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { taka, dt } from "@/lib/format";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import { ArrowRight, Download, FileSpreadsheet, Printer } from "lucide-react";
 
 type Row = {
@@ -37,7 +37,7 @@ export default function TransferHistoryPage() {
         <div className="min-w-[160px] flex-1 basis-[220px] lg:max-w-[300px]"><input className="input" placeholder="Search transfer no or outlet…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("stock-transfers", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("stock-transfers", HEAD, sheet())}><Download size={16} /></button>
+          <button className="btn btn-ghost px-3" title="Download PDF" onClick={() => exportPdf("stock-transfers", HEAD, sheet(), "Stock Transfers")}><Download size={16} /></button>
           <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { taka } from "@/lib/format";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
 import DateInput from "@/components/DateInput";
 
@@ -64,7 +64,7 @@ export default function ProductsReport({
         </div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel(title.toLowerCase().replace(/\s+/g, "-"), HEAD, sheet())}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv(title.toLowerCase().replace(/\s+/g, "-"), HEAD, sheet())}><Download size={16} /></button>
+          <button className="btn btn-ghost px-3" title="Download PDF" onClick={() => exportPdf(title.toLowerCase().replace(/\s+/g, "-"), HEAD, sheet(), title)}><Download size={16} /></button>
           <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>

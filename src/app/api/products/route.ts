@@ -72,8 +72,8 @@ async function nextAutoSku(taken: Set<string>) {
 // POST /api/products — create product + variants (SKU auto-generates if left blank)
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, type, brandId, categoryId, warrantyPolicyId, variants } = body as {
-    name: string; type: string; brandId?: string; categoryId?: string; warrantyPolicyId?: string; variants: NewVariant[];
+  const { name, type, brandId, categoryId, warrantyPolicyId, imageUrl, variants } = body as {
+    name: string; type: string; brandId?: string; categoryId?: string; warrantyPolicyId?: string; imageUrl?: string; variants: NewVariant[];
   };
   if (!name || !variants?.length) {
     return NextResponse.json({ error: "Name and at least one variant are required." }, { status: 400 });
@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
         brandId: brandId || undefined,
         categoryId: categoryId || undefined,
         warrantyPolicyId: warrantyPolicyId || undefined,
+        imageUrl: imageUrl || undefined,
         variants: {
           create: prepared.map((v) => ({
             sku: v.sku,

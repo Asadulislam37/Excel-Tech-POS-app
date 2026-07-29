@@ -38,7 +38,7 @@ export default function SerialTrack() {
         <p className="mt-1 text-[13px] text-muted">Scan or type an IMEI / serial number to trace its full history — purchase, sale, customer, and warranty.</p>
         <div className="mt-3 flex gap-2">
           <input className="input font-mono" placeholder="356938104263201" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} autoFocus />
-          <button className="btn btn-primary shrink-0" onClick={search}><Search size={15} /> Trace</button>
+          <button className="btn btn-primary shrink-0" onClick={search}><Search size={15} /> Search</button>
         </div>
         {err && <div className="mt-3 rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{err}</div>}
       </div>

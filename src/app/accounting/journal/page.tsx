@@ -3,7 +3,7 @@ import DateInput from "@/components/DateInput";
 
 import { useCallback, useEffect, useState } from "react";
 import { taka, dt } from "@/lib/format";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import { Download, Eye, FileSpreadsheet, Plus, Printer, Trash2, X } from "lucide-react";
 
 type Account = { id: string; code: string; name: string; type: string };
@@ -70,7 +70,7 @@ export default function ManageJournalPage() {
         <div className="min-w-[130px] basis-[150px]"><DateInput value={date} onChange={(e) => setDate(e.target.value)} /></div>
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel("journal", HEAD, sheet())}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv("journal", HEAD, sheet())}><Download size={16} /></button>
+          <button className="btn btn-ghost px-3" title="Download PDF" onClick={() => exportPdf("journal", HEAD, sheet(), "Manage Journal")}><Download size={16} /></button>
           <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>

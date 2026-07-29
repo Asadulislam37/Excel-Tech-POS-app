@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import DateInput from "@/components/DateInput";
 
 /** Shared header for the financial reports: title, date controls, export buttons. */
@@ -31,7 +31,7 @@ export default function ReportShell({
         {dates}
         <div className="flex shrink-0 gap-2">
           <button className="btn btn-ghost px-3" title="Export to Excel" onClick={() => exportExcel(filename, head, rows())}><FileSpreadsheet size={16} /></button>
-          <button className="btn btn-ghost px-3" title="Download CSV" onClick={() => exportCsv(filename, head, rows())}><Download size={16} /></button>
+          <button className="btn btn-ghost px-3" title="Download PDF" onClick={() => exportPdf(filename, head, rows(), typeof title === "string" ? title : filename)}><Download size={16} /></button>
           <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>

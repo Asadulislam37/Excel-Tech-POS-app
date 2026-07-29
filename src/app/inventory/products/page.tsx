@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { taka } from "@/lib/format";
-import { FileSpreadsheet, ImageIcon, MoreHorizontal, Pencil, Plus, Printer, ScanBarcode, X } from "lucide-react";
+import { fileToThumbnail } from "@/lib/image";
+import { exportPdf } from "@/lib/export";
+import { FileSpreadsheet, ImageIcon, MoreHorizontal, Pencil, Plus, Printer, ScanBarcode, Upload, X } from "lucide-react";
 
 type Named = { id: string; name: string };
 type Config = { brands: Named[]; categories: Named[]; colors: Named[]; sizes: Named[]; units: Named[]; warranties: Named[] };
@@ -81,7 +83,17 @@ export default function ProductsPage() {
   const [barcode, setBarcode] = useState<BarcodeJob | null>(null);
   const [confirmP, setConfirmP] = useState<Product | null>(null);
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ name: "", type: "SERIALIZED", brandId: "", categoryId: "", warrantyPolicyId: "" });
+  const [form, setForm] = useState({ name: "", type: "SERIALIZED", brandId: "", categoryId: "", warrantyPolicyId: "", imageUrl: "" });
+  const [imgBusy, setImgBusy] = useState(false);
+
+  // Shrink a picked photo to a small thumbnail and hand back the data URL.
+  const pickImage = async (file: File | undefined, set: (url: string) => void) => {
+    if (!file) return;
+    setImgBusy(true);
+    try { set(await fileToThumbnail(file)); }
+    catch (e) { alert(e instanceof Error ? e.message : "Could not use that image."); }
+    finally { setImgBusy(false); }
+  };
   const [variants, setVariants] = useState<NewVariant[]>([{ sku: "", colorId: "", sizeId: "", costPrice: 0, wholesalePrice: 0, salePrice: 0, mrp: 0 }]);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -142,7 +154,7 @@ export default function ProductsPage() {
     const data = await res.json();
     if (!res.ok) return setErr(data.error);
     setShow(false);
-    setForm({ name: "", type: "SERIALIZED", brandId: "", categoryId: "", warrantyPolicyId: "" });
+    setForm({ name: "", type: "SERIALIZED", brandId: "", categoryId: "", warrantyPolicyId: "", imageUrl: "" });
     setVariants([{ sku: "", colorId: "", sizeId: "", costPrice: 0, wholesalePrice: 0, salePrice: 0, mrp: 0 }]);
     load();
   };
@@ -189,7 +201,7 @@ export default function ProductsPage() {
     try {
       await patch(editP.id, {
         name: editP.name, brandId: editP.brandId ?? "", categoryId: editP.categoryId ?? "",
-        unitId: editP.unitId ?? "", warrantyPolicyId: editP.warrantyPolicyId ?? "",
+        unitId: editP.unitId ?? "", warrantyPolicyId: editP.warrantyPolicyId ?? "", imageUrl: editP.imageUrl ?? "",
         variants: editP.variants.map((v) => ({
           id: v.id, sku: v.sku, costPrice: Number(v.costPrice) || 0, wholesalePrice: Number(v.wholesalePrice) || 0,
           salePrice: Number(v.salePrice) || 0, mrp: Number(v.mrp) || 0,
@@ -220,19 +232,14 @@ export default function ProductsPage() {
 
   const rows = products.flatMap((p) => p.variants.map((v) => ({ p, v })));
 
-  const exportCsv = () => {
+  const exportProductsPdf = () => {
     const head = ["SKU", "Category", "Brand", "Product", "Variant", "Costing", "Wholesale", "Retail", "MRP", "Warranty", "Stock"];
-    const lines = rows.map(({ p, v }) => [
+    const body = rows.map(({ p, v }) => [
       v.sku, p.category?.name ?? "", p.brand?.name ?? "", p.name,
       [v.color?.name, v.size?.name].filter(Boolean).join(" · "),
-      v.costPrice, v.wholesalePrice ?? "", v.salePrice, v.mrp ?? "", p.warrantyPolicy?.name ?? "", stockOf(p, v),
-    ].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
-    const blob = new Blob(["﻿" + [head.join(","), ...lines].join("\n")], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `products-${tab}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+      Number(v.costPrice), v.wholesalePrice ?? "", Number(v.salePrice), v.mrp ?? "", p.warrantyPolicy?.name ?? "", stockOf(p, v),
+    ]);
+    exportPdf(`products-${tab}`, head, body, "Product List");
   };
 
   const printBarcodes = () => {
@@ -296,7 +303,7 @@ export default function ProductsPage() {
           {cfg?.brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
         <div className="ml-auto flex gap-2">
-          <button className="btn btn-ghost" title="Export CSV / Excel" onClick={exportCsv}><FileSpreadsheet size={16} /></button>
+          <button className="btn btn-ghost" title="Download PDF" onClick={exportProductsPdf}><FileSpreadsheet size={16} /></button>
           <button className="btn btn-ghost" title="Print list" onClick={() => window.print()}><Printer size={16} /></button>
         </div>
       </div>
@@ -479,6 +486,19 @@ export default function ProductsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditP(null)}>
           <div className="card max-h-[90vh] w-full max-w-4xl space-y-3 overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between"><h3 className="font-bold">Edit product</h3><button onClick={() => setEditP(null)}><X size={17} /></button></div>
+            <div className="flex items-center gap-3">
+              {editP.imageUrl
+                ? /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={editP.imageUrl} alt="" className="h-16 w-16 rounded-md border border-line object-cover" />
+                : <span className="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-line bg-paper text-muted"><ImageIcon size={20} /></span>}
+              <div className="flex flex-col gap-1">
+                <label className="btn btn-ghost w-fit cursor-pointer text-[12px]">
+                  <Upload size={14} /> {imgBusy ? "Processing…" : editP.imageUrl ? "Change photo" : "Upload photo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => pickImage(e.target.files?.[0], (url) => setEditP((p) => p && { ...p, imageUrl: url }))} />
+                </label>
+                {editP.imageUrl && <button type="button" className="w-fit text-[12px] font-semibold text-red" onClick={() => setEditP((p) => p && { ...p, imageUrl: "" })}>Remove photo</button>}
+              </div>
+            </div>
             <input className={inp} value={editP.name} onChange={(e) => setEditP({ ...editP, name: e.target.value })} />
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               {([
@@ -532,6 +552,19 @@ export default function ProductsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShow(false)}>
           <div className="card max-h-[90vh] w-full max-w-4xl space-y-3 overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between"><h3 className="font-bold">New product</h3><button onClick={() => setShow(false)}><X size={17} /></button></div>
+            <div className="flex items-center gap-3">
+              {form.imageUrl
+                ? /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={form.imageUrl} alt="" className="h-16 w-16 rounded-md border border-line object-cover" />
+                : <span className="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-line bg-paper text-muted"><ImageIcon size={20} /></span>}
+              <div className="flex flex-col gap-1">
+                <label className="btn btn-ghost w-fit cursor-pointer text-[12px]">
+                  <Upload size={14} /> {imgBusy ? "Processing…" : form.imageUrl ? "Change photo" : "Upload photo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => pickImage(e.target.files?.[0], (url) => setForm((f) => ({ ...f, imageUrl: url })))} />
+                </label>
+                {form.imageUrl && <button type="button" className="w-fit text-[12px] font-semibold text-red" onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}>Remove photo</button>}
+              </div>
+            </div>
             <input className={inp} placeholder="Product name — e.g. Redmi Note 13" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <div className="grid grid-cols-2 gap-2">
               <select className={inp} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>

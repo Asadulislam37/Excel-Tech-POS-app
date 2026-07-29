@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { taka } from "@/lib/format";
-import { exportCsv, exportExcel } from "@/lib/export";
+import { exportPdf, exportExcel } from "@/lib/export";
 import { ImageIcon } from "lucide-react";
 import StockTabs from "@/components/StockTabs";
 import StockFilterBar, { StockCfg, StockFilters } from "@/components/StockFilterBar";
@@ -58,7 +58,7 @@ export default function StockReportPage() {
 
       <StockFilterBar cfg={cfg} value={f} onChange={change}
         onExcel={() => exportExcel("stock-report", HEAD, sheet())}
-        onCsv={() => exportCsv("stock-report", HEAD, sheet())} />
+        onCsv={() => exportPdf("stock-report", HEAD, sheet(), "Stock Report")} />
 
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[960px]">

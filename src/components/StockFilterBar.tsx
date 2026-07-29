@@ -63,7 +63,7 @@ export default function StockFilterBar({
       </Cell>
       <div className="flex shrink-0 gap-2">
         <button className="btn btn-ghost px-3" title="Export to Excel" onClick={onExcel}><FileSpreadsheet size={16} /></button>
-        <button className="btn btn-ghost px-3" title="Download CSV" onClick={onCsv}><Download size={16} /></button>
+        <button className="btn btn-ghost px-3" title="Download PDF" onClick={onCsv}><Download size={16} /></button>
         <button className="btn btn-ghost px-3" title="Print" onClick={() => window.print()}><Printer size={16} /></button>
       </div>
     </div>
