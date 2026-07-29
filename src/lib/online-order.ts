@@ -29,8 +29,15 @@ export class OrderError extends Error {}
 /**
  * Validate + create a PENDING online order. Throws `OrderError` with a
  * customer-safe message on any bad input or out-of-stock item.
+ *
+ * `opts.preorder` allows ordering out-of-stock items (skips the stock check)
+ * and tags the order note as a pre-order. Only the caller decides this — the
+ * agent gates it behind the shop-wide preorder setting.
  */
-export async function createOnlineOrder(input: CreateOnlineOrderInput) {
+export async function createOnlineOrder(
+  input: CreateOnlineOrderInput,
+  opts: { preorder?: boolean } = {}
+) {
   const { customerName, phone, address, area, note, payMethod, payReference, items } = input;
 
   if (!customerName?.trim() || !phone?.trim() || !address?.trim())
@@ -66,7 +73,7 @@ export async function createOnlineOrder(input: CreateOnlineOrderInput) {
 
     const stock = variantStock(v.product.type, v);
     const qty = Math.max(1, Math.min(Number(it.quantity) || 1, 5));
-    if (stock < qty) throw new OrderError(`${v.product.name} is out of stock.`);
+    if (!opts.preorder && stock < qty) throw new OrderError(`${v.product.name} is out of stock.`);
 
     const price = new Prisma.Decimal(v.onlinePrice ?? v.salePrice);
     subTotal = subTotal.add(price.mul(qty));
@@ -84,6 +91,11 @@ export async function createOnlineOrder(input: CreateOnlineOrderInput) {
   const grandTotal = subTotal.add(deliveryCharge);
   const count = await prisma.onlineOrder.count();
 
+  // Tag pre-orders in the note (no schema column needed) so the owner can spot
+  // them in Online Orders and process when stock arrives.
+  const baseNote = note?.trim();
+  const finalNote = opts.preorder ? `⏳ PRE-ORDER${baseNote ? ` — ${baseNote}` : ""}` : baseNote || undefined;
+
   return prisma.onlineOrder.create({
     data: {
       orderNo: `ET-${String(count + 1001).padStart(5, "0")}`,
@@ -91,7 +103,7 @@ export async function createOnlineOrder(input: CreateOnlineOrderInput) {
       phone: phone.trim(),
       address: address.trim(),
       area,
-      note: note?.trim() || undefined,
+      note: finalNote,
       payMethod,
       payReference: payReference?.trim() || undefined,
       subTotal,

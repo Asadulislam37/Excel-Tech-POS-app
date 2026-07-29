@@ -1,11 +1,11 @@
 // Tool definitions (Gemini function declarations) + their server-side executors.
 // Each tool reuses the app's shared libs — it never re-implements stock/order
 // logic, so the agent obeys the exact same rules as the storefront and POS.
-import { Type } from "@google/genai";
+import { Type, type Schema } from "@google/genai";
 import type { AgentTool } from "@/lib/agent/run";
 import { agentSearchCatalog, agentGetVariant } from "@/lib/catalog";
 import { createOnlineOrder, OrderError, type CreateOnlineOrderInput } from "@/lib/online-order";
-import { getDeliveryCharges } from "@/lib/settings";
+import { getDeliveryCharges, getPreorderEnabled } from "@/lib/settings";
 import { businessSummary, lowStock, deadStock, topProducts } from "@/lib/agent/metrics";
 
 // ── Customer tools ────────────────────────────────────────────────────────────
@@ -62,49 +62,52 @@ const deliveryCharges: AgentTool = {
   run: async () => getDeliveryCharges(),
 };
 
+// Shared parameter schema for both ordering tools.
+const ORDER_PARAMS: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    customerName: { type: Type.STRING, description: "Customer's full name." },
+    phone: { type: Type.STRING, description: "11-digit Bangladeshi phone, starts 01." },
+    address: { type: Type.STRING, description: "Full delivery address." },
+    area: {
+      type: Type.STRING,
+      enum: ["INSIDE_DHAKA", "OUTSIDE_DHAKA"],
+      description: "Delivery zone (affects delivery charge).",
+    },
+    payMethod: {
+      type: Type.STRING,
+      enum: ["COD", "BKASH", "NAGAD"],
+      description: "COD = cash on delivery. BKASH/NAGAD require a payReference.",
+    },
+    payReference: {
+      type: Type.STRING,
+      description: "bKash/Nagad transaction ID — required if payMethod is BKASH or NAGAD.",
+    },
+    note: { type: Type.STRING, description: "Optional order note." },
+    items: {
+      type: Type.ARRAY,
+      description: "The variants to order.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          variantId: { type: Type.STRING, description: "variantId from search_catalog." },
+          quantity: { type: Type.INTEGER, description: "How many (1–5)." },
+        },
+        required: ["variantId", "quantity"],
+      },
+    },
+  },
+  required: ["customerName", "phone", "address", "area", "payMethod", "items"],
+};
+
 const placeOrder: AgentTool = {
   declaration: {
     name: "place_order",
     description:
-      "Place a Cash-on-Delivery or prepaid online order for the customer. Only call this after the " +
+      "Place a Cash-on-Delivery or prepaid online order for an IN-STOCK item. Only call this after the " +
       "customer has confirmed the exact product(s), their name, phone, full address, and area. " +
       "Prices come from the database automatically — you do not set them. Returns an order number.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        customerName: { type: Type.STRING, description: "Customer's full name." },
-        phone: { type: Type.STRING, description: "11-digit Bangladeshi phone, starts 01." },
-        address: { type: Type.STRING, description: "Full delivery address." },
-        area: {
-          type: Type.STRING,
-          enum: ["INSIDE_DHAKA", "OUTSIDE_DHAKA"],
-          description: "Delivery zone (affects delivery charge).",
-        },
-        payMethod: {
-          type: Type.STRING,
-          enum: ["COD", "BKASH", "NAGAD"],
-          description: "COD = cash on delivery. BKASH/NAGAD require a payReference.",
-        },
-        payReference: {
-          type: Type.STRING,
-          description: "bKash/Nagad transaction ID — required if payMethod is BKASH or NAGAD.",
-        },
-        note: { type: Type.STRING, description: "Optional order note." },
-        items: {
-          type: Type.ARRAY,
-          description: "The variants to order.",
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              variantId: { type: Type.STRING, description: "variantId from search_catalog." },
-              quantity: { type: Type.INTEGER, description: "How many (1–5)." },
-            },
-            required: ["variantId", "quantity"],
-          },
-        },
-      },
-      required: ["customerName", "phone", "address", "area", "payMethod", "items"],
-    },
+    parameters: ORDER_PARAMS,
   },
   run: async (args) => {
     try {
@@ -116,6 +119,37 @@ const placeOrder: AgentTool = {
         deliveryCharge: Number(order.deliveryCharge),
         status: order.status,
         message: `Order ${order.orderNo} placed. Total ৳${Number(order.grandTotal)} (incl. delivery).`,
+      };
+    } catch (e) {
+      if (e instanceof OrderError) return { ok: false, error: e.message };
+      throw e;
+    }
+  },
+};
+
+const placePreorder: AgentTool = {
+  declaration: {
+    name: "place_preorder",
+    description:
+      "Place a PRE-ORDER for an item that is currently OUT OF STOCK — the customer orders now and " +
+      "receives it when the shop restocks. Use only after confirming the item is out of stock, the " +
+      "customer agreed to pre-order, and you have the same details as a normal order. If pre-orders " +
+      "are turned off, this returns an error — then tell the customer politely and offer a human.",
+    parameters: ORDER_PARAMS,
+  },
+  run: async (args) => {
+    if (!(await getPreorderEnabled()))
+      return { ok: false, error: "Pre-orders are not available right now." };
+    try {
+      const order = await createOnlineOrder(args as unknown as CreateOnlineOrderInput, { preorder: true });
+      return {
+        ok: true,
+        preorder: true,
+        orderNo: order.orderNo,
+        grandTotal: Number(order.grandTotal),
+        deliveryCharge: Number(order.deliveryCharge),
+        status: order.status,
+        message: `Pre-order ${order.orderNo} placed. We'll contact you when it arrives. Total ৳${Number(order.grandTotal)} (incl. delivery).`,
       };
     } catch (e) {
       if (e instanceof OrderError) return { ok: false, error: e.message };
@@ -153,6 +187,7 @@ export const customerTools: AgentTool[] = [
   getVariant,
   deliveryCharges,
   placeOrder,
+  placePreorder,
   requestHuman,
 ];
 

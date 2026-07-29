@@ -26,6 +26,25 @@ export async function getDeliveryCharges(): Promise<DeliveryCharges> {
   };
 }
 
+// ── Pre-orders ────────────────────────────────────────────────────────────────
+// A shop-wide switch: when on, the AI agent may take orders for out-of-stock
+// items (customer pays/receives when stock arrives). Off by default.
+export const PREORDER_KEY = "preorder_enabled";
+
+export async function getPreorderEnabled(): Promise<boolean> {
+  const row = await prisma.setting.findUnique({ where: { key: PREORDER_KEY } });
+  return row?.value === "1";
+}
+
+export async function savePreorderEnabled(enabled: boolean): Promise<void> {
+  const value = enabled ? "1" : "0";
+  await prisma.setting.upsert({
+    where: { key: PREORDER_KEY },
+    create: { key: PREORDER_KEY, value },
+    update: { value },
+  });
+}
+
 /** Persist both delivery charges. */
 export async function saveDeliveryCharges(charges: DeliveryCharges) {
   const entries: [string, number][] = [
