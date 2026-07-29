@@ -15,7 +15,7 @@ const fromISO = (s: string) => { const [y, m, d] = s.split("-").map(Number); ret
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 export default function DateInput({
-  value, onChange, className = "input", placeholder = "dd/mm/yyyy",
+  value, onChange, className = "input", placeholder = "Date",
 }: {
   value: string;
   onChange: (e: { target: { value: string } }) => void;

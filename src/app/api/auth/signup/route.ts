@@ -18,11 +18,20 @@ export async function POST(req: NextRequest) {
   if (String(password ?? "").length < 6)
     return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
 
+  // Public registration is only for the very first account (the shop owner).
+  // After that, staff accounts are created by the admin in User Management —
+  // this keeps random people from signing up on a private, few-user system.
+  const userCount = await prisma.user.count();
+  if (userCount > 0)
+    return NextResponse.json(
+      { error: "Registration is closed. Ask the admin to create your account." },
+      { status: 403 }
+    );
+
   const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
   if (existing) return NextResponse.json({ error: "An account with this email already exists." }, { status: 400 });
 
-  // The very first account to register owns the shop → ADMIN.
-  const isFirst = (await prisma.user.count()) === 0;
+  const isFirst = true; // guaranteed by the check above
 
   const user = await prisma.user.create({
     data: {

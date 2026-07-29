@@ -45,6 +45,13 @@ Warranty Claim, Rewards (Setup/Level/History), Role Management, Reports→Day Bo
 **EMI, Sales Requisition, Sales Quotation were removed from nav per owner request.**
 
 ## 3. Key Decisions
+- **Access control:** public sign-up is CLOSED after the first (owner/ADMIN) account — staff are
+  created by an admin at **/config/users** (User Management: add/deactivate/role/reset-password,
+  admin-only via `/api/users`). Login rejects `isActive:false`. Middleware still gates by session only
+  (not role); role is enforced in the users API. **Supabase RLS is ENABLED on all 48 public tables**
+  (the app connects as the `postgres` owner which bypasses RLS, so it's unaffected; this closes the
+  "table publicly accessible" exposure via the anon PostgREST API). Re-run enable-RLS after any
+  `prisma db push` that creates a NEW table.
 - **Custom auth, NOT Supabase Auth** — scrypt password hashing (Node built-in, no native dep), HMAC
   session cookie `et_session` signed with Web Crypto (works in Edge middleware). `src/middleware.ts`
   gates everything except public prefixes.

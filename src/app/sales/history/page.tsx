@@ -10,8 +10,8 @@ import InvoiceView, { InvoiceSale } from "@/components/InvoiceView";
 import DateInput from "@/components/DateInput";
 
 type Named = { id: string; name: string };
-type Sale = InvoiceSale & { status: string; courierConsignmentId?: string | null; courierTracking?: string | null; courierStatus?: string | null };
-type Data = { total: number; totalAmount: number; totalDue: number; rows: Sale[] };
+type Sale = InvoiceSale & { status: string; returnedAmount?: number; courierConsignmentId?: string | null; courierTracking?: string | null; courierStatus?: string | null };
+type Data = { total: number; totalAmount: number; totalReturned: number; netAmount: number; totalDue: number; rows: Sale[] };
 
 const TYPE_LABEL: Record<string, string> = {
   CUSTOMER: "Customer Sale", RETAIL: "Retail Sale", WHOLESALE: "Wholesale",
@@ -160,11 +160,19 @@ export default function SalesHistory() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SalesTabs />
-        <div className="card flex divide-x divide-line">
+        <div className="card flex flex-wrap divide-x divide-line">
           <div className="px-4 py-2"><div className="text-[11px] font-semibold uppercase text-muted">Invoices</div>
             <div className="text-xl font-bold">{d ? d.total.toLocaleString() : "…"}</div></div>
           <div className="px-4 py-2"><div className="text-[11px] font-semibold uppercase text-muted">Amount</div>
             <div className="text-xl font-bold">{d ? taka(d.totalAmount) : "…"}</div></div>
+          {d && d.totalReturned > 0 && (
+            <>
+              <div className="px-4 py-2"><div className="text-[11px] font-semibold uppercase text-muted">Returns</div>
+                <div className="text-xl font-bold text-red">-{taka(d.totalReturned)}</div></div>
+              <div className="px-4 py-2"><div className="text-[11px] font-semibold uppercase text-muted">Net Sales</div>
+                <div className="text-xl font-bold text-tealdark">{taka(d.netAmount)}</div></div>
+            </>
+          )}
           <div className="px-4 py-2"><div className="text-[11px] font-semibold uppercase text-muted">Due</div>
             <div className="text-xl font-bold text-amber">{d ? taka(d.totalDue) : "…"}</div></div>
         </div>
@@ -209,10 +217,12 @@ export default function SalesHistory() {
                 <td className="td font-mono text-[12px]">{s.invoiceNo}</td>
                 <td className="td font-semibold">{s.customer?.name ?? "Walk-in"}</td>
                 <td className="td font-mono text-[12px]">{s.customer?.phone ?? "—"}</td>
-                <td className="td"><span className="rounded bg-tealsoft px-2 py-0.5 text-[11px] font-bold text-tealdark">{TYPE_LABEL[s.saleType] ?? s.saleType}</span></td>
+                <td className="td"><span className="rounded bg-tealsoft px-2 py-0.5 text-[11px] font-bold text-tealdark">{TYPE_LABEL[s.saleType] ?? s.saleType}</span>
+                  {(s.status === "RETURNED" || s.status === "EXCHANGED") && <span className="ml-1 rounded bg-redsoft px-2 py-0.5 text-[11px] font-bold text-red">{s.status === "RETURNED" ? "Returned" : "Exchanged"}</span>}</td>
                 <td className="td text-right font-bold">{qtyOf(s)}</td>
                 <td className="td text-right font-semibold">{taka(s.grandTotal)}
-                  {Number(s.dueTotal) > 0 && <div className="text-[11px] font-bold text-amber">due {taka(s.dueTotal)}</div>}</td>
+                  {Number(s.dueTotal) > 0 && <div className="text-[11px] font-bold text-amber">due {taka(s.dueTotal)}</div>}
+                  {Number(s.returnedAmount) > 0 && <div className="text-[11px] font-bold text-red">returned {taka(s.returnedAmount!)}</div>}</td>
                 <td className="td">
                   <div className="flex items-center justify-center gap-1.5">
                     <button title="View invoice" className="rounded-md bg-orange-100 p-2 text-orange-600 hover:bg-orange-200" onClick={() => setView(s)}><Eye size={14} /></button>

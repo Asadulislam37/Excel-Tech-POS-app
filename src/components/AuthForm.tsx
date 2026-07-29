@@ -86,7 +86,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
           <div className="mt-4 text-center text-[13px] text-muted">
             {isLogin ? (
-              <>New here? <Link href="/signup" className="font-semibold text-tealdark">Create an account</Link></>
+              <>Need an account? Ask your admin to create one.</>
             ) : (
               <>Already have an account? <Link href="/login" className="font-semibold text-tealdark">Sign in</Link></>
             )}

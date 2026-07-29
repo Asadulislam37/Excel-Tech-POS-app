@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     }),
   };
 
-  const [total, sales, agg] = await Promise.all([
+  const [total, sales, agg, returnedAgg] = await Promise.all([
     prisma.sale.count({ where }),
     prisma.sale.findMany({
       where,
@@ -46,13 +46,28 @@ export async function GET(req: NextRequest) {
       take: 50,
     }),
     prisma.sale.aggregate({ where, _sum: { grandTotal: true, dueTotal: true } }),
+    // Total refunded across all sales matching this filter.
+    prisma.saleReturn.aggregate({ where: { sale: where }, _sum: { totalAmount: true } }),
   ]);
 
+  // Per-invoice refunded amount, so returned rows can be flagged in the list.
+  const perSale = await prisma.saleReturn.groupBy({
+    by: ["saleId"],
+    where: { saleId: { in: sales.map((s) => s.id) } },
+    _sum: { totalAmount: true },
+  });
+  const returnedBySale = new Map(perSale.map((r) => [r.saleId, Number(r._sum.totalAmount ?? 0)]));
+  const rows = sales.map((s) => ({ ...s, returnedAmount: returnedBySale.get(s.id) ?? 0 }));
+
+  const totalAmount = Number(agg._sum.grandTotal ?? 0);
+  const totalReturned = Number(returnedAgg._sum.totalAmount ?? 0);
   return NextResponse.json({
     total,
-    totalAmount: Number(agg._sum.grandTotal ?? 0),
+    totalAmount,
+    totalReturned,
+    netAmount: totalAmount - totalReturned,
     totalDue: Number(agg._sum.dueTotal ?? 0),
-    rows: sales,
+    rows,
   });
 }
 

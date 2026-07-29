@@ -53,11 +53,12 @@ export async function GET(req: NextRequest) {
   });
 
   const all = variants.map((v) => {
-    const stock = v.product.type === "SERIALIZED"
+    const serialized = v.product.type === "SERIALIZED";
+    const stock = serialized
       ? v._count.serialUnits
       : v.stockLevels.reduce((s, l) => s + l.quantity, 0);
     return {
-      id: v.id, sku: v.sku,
+      id: v.id, sku: v.sku, serialized,
       category: v.product.category?.name ?? "", brand: v.product.brand?.name ?? "",
       imageUrl: v.product.imageUrl,
       name: v.product.name,
@@ -77,7 +78,24 @@ export async function GET(req: NextRequest) {
 
   const totalQty = all.reduce((s, r) => s + r.qty, 0);
   const totalValue = all.reduce((s, r) => s + r.qty * r.costing, 0);
-  const rows = all.slice((page - 1) * 50, page * 50);
+  const pageRows = all.slice((page - 1) * 50, page * 50);
+
+  // Attach IN_STOCK serial numbers (IMEIs) for the serialized items on this page.
+  const serializedIds = pageRows.filter((r) => r.serialized).map((r) => r.id);
+  const serialsByVariant = new Map<string, string[]>();
+  if (serializedIds.length) {
+    const units = await prisma.serialUnit.findMany({
+      where: { variantId: { in: serializedIds }, status: "IN_STOCK", ...(outletId && { outletId }) },
+      select: { variantId: true, serialNo: true },
+      orderBy: { serialNo: "asc" },
+    });
+    for (const u of units) {
+      const arr = serialsByVariant.get(u.variantId) ?? [];
+      arr.push(u.serialNo);
+      serialsByVariant.set(u.variantId, arr);
+    }
+  }
+  const rows = pageRows.map((r) => ({ ...r, serials: serialsByVariant.get(r.id) ?? [] }));
 
   return NextResponse.json({ rows, total: all.length, totalQty, totalValue });
 }

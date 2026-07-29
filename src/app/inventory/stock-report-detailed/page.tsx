@@ -9,11 +9,10 @@ import StockFilterBar, { StockCfg, StockFilters } from "@/components/StockFilter
 
 type Row = {
   id: string; sku: string; category: string; brand: string;
-  name: string; variant: string; qty: number;
+  name: string; variant: string; qty: number; serials: string[];
   costing: number; wholesale: number; retail: number; mrp: number; warranty: string; alert: number;
 };
 type Report = { rows: Row[]; total: number; totalQty: number; totalValue: number };
-type Unit = { id: string; serialNo: string; createdAt: string };
 
 const EMPTY: StockFilters = { outletId: "", q: "", categoryId: "", brandId: "", type: "", filter: "all" };
 
@@ -23,7 +22,6 @@ export default function StockReportDetailedPage() {
   const [data, setData] = useState<Report | null>(null);
   const [cfg, setCfg] = useState<StockCfg | null>(null);
   const [open, setOpen] = useState("");
-  const [units, setUnits] = useState<Record<string, Unit[]>>({});
 
   const load = useCallback(async () => {
     const params = new URLSearchParams({ q: f.q, filter: f.filter, page: String(page) });
@@ -40,23 +38,15 @@ export default function StockReportDetailedPage() {
 
   const change = (next: Partial<StockFilters>) => { setF((p) => ({ ...p, ...next })); setPage(1); };
 
-  const toggle = async (r: Row) => {
-    if (open === r.id) return setOpen("");
-    setOpen(r.id);
-    if (!units[r.id]) {
-      const res = await fetch(`/api/serials?variantId=${r.id}&status=IN_STOCK`);
-      const list: Unit[] = res.ok ? await res.json() : [];
-      setUnits((u) => ({ ...u, [r.id]: list }));
-    }
-  };
+  const toggle = (r: Row) => setOpen((o) => (o === r.id ? "" : r.id));
 
   const totals = (data?.rows ?? []).reduce(
     (a, r) => ({ cost: a.cost + r.qty * r.costing, retail: a.retail + r.qty * r.retail }),
     { cost: 0, retail: 0 });
 
-  const HEAD = ["SL.", "SKU", "Product Name", "Brand", "QTY", "Costing", "Stock Value", "Retail", "Retail Value", "Potential Profit"];
+  const HEAD = ["SL.", "SKU", "Product Name", "IMEI / Serial No.", "Brand", "QTY", "Costing", "Stock Value", "Retail", "Retail Value", "Potential Profit"];
   const sheet = () => (data?.rows ?? []).map((r, i) => [
-    (page - 1) * 50 + i + 1, r.sku, [r.name, r.variant].filter(Boolean).join(" — "), r.brand,
+    (page - 1) * 50 + i + 1, r.sku, [r.name, r.variant].filter(Boolean).join(" — "), r.serials.join(", "), r.brand,
     r.qty, r.costing, r.qty * r.costing, r.retail, r.qty * r.retail, r.qty * (r.retail - r.costing),
   ]);
 
@@ -98,7 +88,8 @@ export default function StockReportDetailedPage() {
                       </span>
                     </td>
                     <td className="td font-mono text-[12px]">{r.sku}</td>
-                    <td className="td font-semibold">{r.name}{r.variant && <span className="ml-1 text-[11px] font-normal text-muted">{r.variant}</span>}</td>
+                    <td className="td font-semibold">{r.name}{r.variant && <span className="ml-1 text-[11px] font-normal text-muted">{r.variant}</span>}
+                      {r.serials.length > 0 && <div className="mt-1 font-mono text-[11px] font-normal text-tealdark">{r.serials.join(", ")}</div>}</td>
                     <td className="td">{r.brand || "—"}</td>
                     <td className="td text-right"><span className={`rounded px-2 py-0.5 text-[11px] font-bold ${r.qty === 0 ? "bg-redsoft text-red" : r.qty <= r.alert ? "bg-ambersoft text-amber" : "bg-tealsoft text-tealdark"}`}>{r.qty}</span></td>
                     <td className="td text-right">{taka(r.costing)}</td>
@@ -113,13 +104,11 @@ export default function StockReportDetailedPage() {
                         <div className="text-[12px] font-semibold uppercase tracking-wide text-muted">
                           {r.category || "Uncategorised"} · alert at {r.alert} · warranty {r.warranty || "none"}
                         </div>
-                        {units[r.id] === undefined
-                          ? <div className="py-2 text-[12px] text-muted">Loading serials…</div>
-                          : units[r.id].length === 0
-                            ? <div className="py-2 text-[12px] text-muted">No IMEI units in stock — quantity-tracked item or nothing stocked in yet.</div>
-                            : <div className="flex flex-wrap gap-1.5 py-2">
-                                {units[r.id].map((u) => <span key={u.id} className="serial-chip">{u.serialNo}</span>)}
-                              </div>}
+                        {r.serials.length === 0
+                          ? <div className="py-2 text-[12px] text-muted">No IMEI units in stock — quantity-tracked item or nothing stocked in yet.</div>
+                          : <div className="flex flex-wrap gap-1.5 py-2">
+                              {r.serials.map((s) => <span key={s} className="serial-chip">{s}</span>)}
+                            </div>}
                       </td>
                     </tr>
                   )}
