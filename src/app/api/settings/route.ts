@@ -5,13 +5,18 @@ import {
   getPreorderEnabled,
   savePreorderEnabled,
 } from "@/lib/settings";
+import { getSourcingSettings, saveSourcingSettings, type SourcingSettings } from "@/lib/sourcing";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/settings → current shop-wide settings
 export async function GET() {
-  const [delivery, preorder] = await Promise.all([getDeliveryCharges(), getPreorderEnabled()]);
-  return NextResponse.json({ delivery, preorder });
+  const [delivery, preorder, sourcing] = await Promise.all([
+    getDeliveryCharges(),
+    getPreorderEnabled(),
+    getSourcingSettings(),
+  ]);
+  return NextResponse.json({ delivery, preorder, sourcing });
 }
 
 // POST /api/settings — updates whichever keys are present:
@@ -31,6 +36,23 @@ export async function POST(req: NextRequest) {
     await savePreorderEnabled(body.preorder);
   }
 
-  const [delivery, preorder] = await Promise.all([getDeliveryCharges(), getPreorderEnabled()]);
-  return NextResponse.json({ delivery, preorder });
+  if (body?.sourcing) {
+    const s = body.sourcing as Partial<SourcingSettings>;
+    const nums = [s.rate, s.shipping, s.profit, s.round].map(Number);
+    if (nums.some((n) => !Number.isFinite(n) || n < 0))
+      return NextResponse.json({ error: "Enter valid sourcing numbers (0 or more)." }, { status: 400 });
+    await saveSourcingSettings({
+      rate: Number(s.rate),
+      shipping: Number(s.shipping),
+      profit: Number(s.profit),
+      round: Math.max(1, Number(s.round)),
+    });
+  }
+
+  const [delivery, preorder, sourcing] = await Promise.all([
+    getDeliveryCharges(),
+    getPreorderEnabled(),
+    getSourcingSettings(),
+  ]);
+  return NextResponse.json({ delivery, preorder, sourcing });
 }

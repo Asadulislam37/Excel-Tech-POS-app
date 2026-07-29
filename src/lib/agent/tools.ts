@@ -7,6 +7,7 @@ import { agentSearchCatalog, agentGetVariant } from "@/lib/catalog";
 import { createOnlineOrder, OrderError, type CreateOnlineOrderInput } from "@/lib/online-order";
 import { getDeliveryCharges, getPreorderEnabled } from "@/lib/settings";
 import { businessSummary, lowStock, deadStock, topProducts } from "@/lib/agent/metrics";
+import { getSourcingSettings, calculateSourcingPrice } from "@/lib/sourcing";
 
 // ── Customer tools ────────────────────────────────────────────────────────────
 
@@ -241,10 +242,40 @@ const topProductsTool: AgentTool = {
   run: async (args) => topProducts(Number(args.days) || 30, Number(args.limit) || 10),
 };
 
+const sourcingQuoteTool: AgentTool = {
+  declaration: {
+    name: "sourcing_quote",
+    description:
+      "Calculate the customer price for an item sourced from Taobao / Pinduoduo / 1688, given its price " +
+      "in Chinese Yuan (RMB / ¥). Applies the shop's exchange rate + flat shipping + flat profit, then " +
+      "rounds UP to a clean number. Use when the owner says e.g. 'cover is 15 yuan, what do I charge?'. " +
+      "Always tell the owner the finalPrice (the rounded number), not the raw total.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        rmb: { type: Type.NUMBER, description: "The Taobao/PDD/1688 price in Chinese Yuan (RMB / ¥)." },
+        shipping: { type: Type.NUMBER, description: "Optional: override the flat shipping fee (৳) for this item." },
+        profit: { type: Type.NUMBER, description: "Optional: override the flat profit (৳) for this item." },
+      },
+      required: ["rmb"],
+    },
+  },
+  run: async (args) => {
+    const rmb = Number(args.rmb);
+    if (!Number.isFinite(rmb) || rmb <= 0) return { error: "Enter a valid Yuan (RMB) price." };
+    const s = await getSourcingSettings();
+    return calculateSourcingPrice(rmb, s, {
+      shipping: args.shipping != null ? Number(args.shipping) : undefined,
+      profit: args.profit != null ? Number(args.profit) : undefined,
+    });
+  },
+};
+
 export const ownerTools: AgentTool[] = [
   businessSummaryTool,
   lowStockTool,
   deadStockTool,
   topProductsTool,
+  sourcingQuoteTool,
   searchCatalog, // owners can also look up stock/price
 ];
