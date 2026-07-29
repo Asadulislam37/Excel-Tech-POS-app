@@ -34,7 +34,7 @@ export function purchaseA4(p: PurchaseDoc) {
     body{font-family:"Segoe UI",sans-serif;color:#111;padding:28px;margin:0}
     .brand{display:flex;justify-content:space-between;align-items:flex-start}
     .brand h2{margin:0;font-size:16px}.muted{color:#555;font-size:12px}
-    .title{background:#e6f2ee;text-align:center;font-size:19px;font-weight:700;padding:8px;border-bottom:3px solid #0d7a72;margin-top:12px}
+    .title{background:#e7f4ec;text-align:center;font-size:19px;font-weight:700;padding:8px;border-bottom:3px solid #026a40;margin-top:12px}
     .head{display:flex;justify-content:space-between;margin-top:12px;font-size:13px;line-height:1.9}
     table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
     th{background:#fdf6ec;border:1px solid #e6ddd2;padding:8px}

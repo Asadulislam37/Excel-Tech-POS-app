@@ -28,17 +28,17 @@ export async function sendMail(opts: { to: string; subject: string; html: string
 
 export function resetEmailHtml(name: string, link: string) {
   return `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;color:#1b2430">
-    <div style="background:#0d7a72;color:#fff;padding:18px 24px;border-radius:10px 10px 0 0">
+    <div style="background:#026a40;color:#fff;padding:18px 24px;border-radius:10px 10px 0 0">
       <h2 style="margin:0;font-size:18px">Excel Tech POS</h2>
     </div>
     <div style="border:1px solid #e3e8ee;border-top:none;padding:24px;border-radius:0 0 10px 10px">
       <p>Hi ${name || "there"},</p>
       <p>We received a request to reset your Excel Tech POS password. Click the button below to choose a new one. This link expires in <b>1 hour</b>.</p>
       <p style="text-align:center;margin:26px 0">
-        <a href="${link}" style="background:#0d7a72;color:#fff;text-decoration:none;padding:12px 26px;border-radius:8px;font-weight:600;display:inline-block">Reset Password</a>
+        <a href="${link}" style="background:#026a40;color:#fff;text-decoration:none;padding:12px 26px;border-radius:8px;font-weight:600;display:inline-block">Reset Password</a>
       </p>
       <p style="font-size:12px;color:#67737f">If the button doesn't work, paste this link into your browser:<br>
-        <a href="${link}" style="color:#0a5f59;word-break:break-all">${link}</a></p>
+        <a href="${link}" style="color:#024d2f;word-break:break-all">${link}</a></p>
       <p style="font-size:12px;color:#67737f">If you didn't request this, you can safely ignore this email — your password stays the same.</p>
     </div>
   </div>`;

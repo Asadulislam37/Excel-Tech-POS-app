@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, RefreshCw, ShoppingBag, Undo2, PackageX, CheckCircle2 } from "lucide-react";
 
-type Note = { id: string; type: "order" | "return" | "stock"; title: string; detail: string; href: string; time?: string };
+type Note = { id: string; type: "order" | "return" | "stock"; title: string; detail: string; href: string };
 
 const ICON = {
   order: { Icon: ShoppingBag, bg: "#dbeafe", fg: "#1d4ed8" },
@@ -12,19 +12,17 @@ const ICON = {
   stock: { Icon: PackageX, bg: "#ffedd5", fg: "#c2410c" },
 } as const;
 
-const ago = (iso?: string) => {
-  if (!iso) return "";
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+const SEEN_KEY = "et_seen_notifications";
+const loadSeen = (): Set<string> => {
+  try { return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[]")); }
+  catch { return new Set(); }
 };
 
 export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
+  const [seen, setSeen] = useState<Set<string>>(new Set());
   const ref = useRef<HTMLDivElement>(null);
 
   const load = async () => {
@@ -35,26 +33,38 @@ export default function NotificationsBell() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { setSeen(loadSeen()); load(); }, []);
   useEffect(() => {
     const onClick = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  const count = items.length;
+  // Unread = items the user hasn't opened the panel on yet.
+  const unread = items.filter((n) => !seen.has(n.id)).length;
+
+  // Opening the panel marks everything currently shown as read.
+  const openPanel = () => {
+    setOpen((o) => {
+      const next = !o;
+      if (next) {
+        const merged = new Set(seen);
+        items.forEach((n) => merged.add(n.id));
+        setSeen(merged);
+        try { localStorage.setItem(SEEN_KEY, JSON.stringify([...merged])); } catch { /* ignore */ }
+        load();
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        className="btn btn-ghost relative px-2.5"
-        title="Notifications"
-        onClick={() => { setOpen((o) => !o); if (!open) load(); }}
-      >
+      <button className="btn btn-ghost relative px-2.5" title="Notifications" onClick={openPanel}>
         <Bell size={17} />
-        {count > 0 && (
+        {unread > 0 && (
           <span className="absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-red px-1 text-[10px] font-bold text-white" style={{ height: 18, minWidth: 18 }}>
-            {count > 9 ? "9+" : count}
+            {unread > 9 ? "9+" : unread}
           </span>
         )}
       </button>
@@ -86,7 +96,6 @@ export default function NotificationsBell() {
                     <div className="min-w-0 flex-1">
                       <div className="text-[13px] font-semibold leading-snug">{n.title}</div>
                       <div className="truncate text-[12px] text-muted">{n.detail}</div>
-                      {n.time && <div className="mt-0.5 text-[11px] text-muted">{ago(n.time)}</div>}
                     </div>
                   </Link>
                 );

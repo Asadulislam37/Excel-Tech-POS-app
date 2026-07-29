@@ -64,6 +64,58 @@ function code39Svg(text: string, height = 56) {
 const stockOf = (p: Product, v: Variant) =>
   p.type === "SERIALIZED" ? v._count.serialUnits : (v.stockLevels[0]?.quantity ?? 0);
 
+// ── CSV import ───────────────────────────────────────────────────────────────
+const IMPORT_HEAD = ["Product Name", "Type", "Brand", "Category", "Warranty", "SKU", "Cost", "Wholesale", "Retail", "MRP"];
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [], field = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+    else if (c !== "\r") field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c.trim() !== ""));
+}
+
+// Map spreadsheet headers (any casing / common aliases) to product fields.
+const FIELD_ALIASES: Record<string, string[]> = {
+  name: ["product name", "name", "product"],
+  type: ["type"],
+  brand: ["brand"],
+  category: ["category"],
+  warranty: ["warranty"],
+  sku: ["sku", "code", "product code"],
+  cost: ["cost", "costing", "cost price", "costing price"],
+  wholesale: ["wholesale", "wholesale price"],
+  retail: ["retail", "retail price", "rp", "sale price", "price"],
+  mrp: ["mrp"],
+};
+function rowsFromCsv(text: string) {
+  const grid = parseCsv(text);
+  if (grid.length < 2) return [];
+  const header = grid[0].map((h) => h.trim().toLowerCase());
+  const colOf = (field: string) => header.findIndex((h) => FIELD_ALIASES[field].includes(h));
+  const idx = Object.fromEntries(Object.keys(FIELD_ALIASES).map((f) => [f, colOf(f)]));
+  return grid.slice(1).map((cells) => {
+    const get = (f: string) => (idx[f] >= 0 ? (cells[idx[f]] ?? "").trim() : "");
+    return {
+      name: get("name"), type: get("type"), brand: get("brand"), category: get("category"), warranty: get("warranty"),
+      sku: get("sku"),
+      cost: Number(get("cost").replace(/[^0-9.\-]/g, "")) || 0,
+      wholesale: Number(get("wholesale").replace(/[^0-9.\-]/g, "")) || 0,
+      retail: Number(get("retail").replace(/[^0-9.\-]/g, "")) || 0,
+      mrp: Number(get("mrp").replace(/[^0-9.\-]/g, "")) || 0,
+    };
+  });
+}
+
 export default function ProductsPage() {
   const [tab, setTab] = useState<"active" | "inactive">("active");
   const [q, setQ] = useState("");
@@ -85,6 +137,38 @@ export default function ProductsPage() {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ name: "", type: "SERIALIZED", brandId: "", categoryId: "", warrantyPolicyId: "", imageUrl: "" });
   const [imgBusy, setImgBusy] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importErr, setImportErr] = useState("");
+  const [importResult, setImportResult] = useState<{ created: number; updated: number; skipped: number; errors: string[]; totalErrors: number } | null>(null);
+
+  const downloadTemplate = () => {
+    const example = ["Redmi Note 13", "Phone", "Xiaomi", "New Phone", "12 Months", "", "28000", "30000", "31000", "32000"];
+    const csv = [IMPORT_HEAD.join(","), example.map((c) => `"${c}"`).join(",")].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" }));
+    a.download = "product-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const runImport = async (file: File | undefined) => {
+    if (!file) return;
+    setImportErr(""); setImportResult(null); setImportBusy(true);
+    try {
+      const text = await file.text();
+      const parsed = rowsFromCsv(text);
+      if (!parsed.length) throw new Error("No rows found. Use the template and keep the header row.");
+      const res = await fetch("/api/products/import", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: parsed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setImportResult(data);
+      load();
+    } catch (e) { setImportErr(e instanceof Error ? e.message : "Import failed."); }
+    finally { setImportBusy(false); }
+  };
 
   // Shrink a picked photo to a small thumbnail and hand back the data URL.
   const pickImage = async (file: File | undefined, set: (url: string) => void) => {
@@ -292,6 +376,9 @@ export default function ProductsPage() {
       <div className="flex flex-wrap items-center gap-2">
         <button className="btn text-white" style={{ background: "var(--amber)" }} onClick={() => setShow(true)}>
           <Plus size={15} /> Create
+        </button>
+        <button className="btn btn-ghost" onClick={() => { setShowImport(true); setImportErr(""); setImportResult(null); }}>
+          <Upload size={15} /> Import
         </button>
         <input className={`${inp} w-56`} placeholder="Type here…" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className={`${inp} w-44`} value={fCat} onChange={(e) => setFCat(e.target.value)}>
@@ -543,6 +630,49 @@ export default function ProductsPage() {
             </div>
             {editErr && <div className="rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{editErr}</div>}
             <button className="btn btn-primary w-full" disabled={busy} onClick={saveEdit}>{busy ? "Updating…" : "Update Now"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Import from CSV ── */}
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowImport(false)}>
+          <div className="card w-full max-w-lg space-y-3 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between"><h3 className="text-lg font-bold">Import products</h3><button onClick={() => setShowImport(false)}><X size={17} /></button></div>
+            <p className="text-[13px] text-muted">
+              Upload a CSV file. In Excel use <b>File → Save As → CSV</b>. Existing products (matched by <b>SKU</b>) are
+              updated; new rows are created. Brands, categories and warranties are created automatically.
+            </p>
+            <div className="rounded-lg bg-paper p-3 text-[12px]">
+              <div className="font-semibold">Columns:</div>
+              <div className="mt-1 text-muted">{IMPORT_HEAD.join(" · ")}</div>
+              <div className="mt-1 text-muted">Type = <b>Phone</b> (IMEI-tracked) or <b>Accessory</b> (quantity). Leave SKU blank to auto-generate.</div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button className="btn btn-ghost" onClick={downloadTemplate}><FileSpreadsheet size={15} /> Download template</button>
+              <label className="btn btn-primary cursor-pointer">
+                <Upload size={15} /> {importBusy ? "Importing…" : "Choose CSV file"}
+                <input type="file" accept=".csv,text/csv" className="hidden" disabled={importBusy}
+                  onChange={(e) => runImport(e.target.files?.[0])} />
+              </label>
+            </div>
+            {importErr && <div className="rounded-md bg-redsoft px-3 py-2 text-[12px] font-semibold text-red">{importErr}</div>}
+            {importResult && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2 text-[13px] font-semibold">
+                  <span className="rounded-md bg-tealsoft px-3 py-1 text-tealdark">{importResult.created} created</span>
+                  <span className="rounded-md bg-blue-100 px-3 py-1 text-blue-700">{importResult.updated} updated</span>
+                  {importResult.skipped > 0 && <span className="rounded-md bg-ambersoft px-3 py-1 text-amber">{importResult.skipped} skipped</span>}
+                </div>
+                {importResult.errors.length > 0 && (
+                  <div className="max-h-32 overflow-y-auto rounded-md bg-redsoft px-3 py-2 text-[12px] text-red">
+                    {importResult.errors.map((e, i) => <div key={i}>{e}</div>)}
+                    {importResult.totalErrors > importResult.errors.length && <div className="font-semibold">…and {importResult.totalErrors - importResult.errors.length} more</div>}
+                  </div>
+                )}
+                <button className="btn btn-primary w-full" onClick={() => setShowImport(false)}>Done</button>
+              </div>
+            )}
           </div>
         </div>
       )}

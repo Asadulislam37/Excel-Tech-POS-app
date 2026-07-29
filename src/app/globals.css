@@ -7,16 +7,28 @@
   --card: #ffffff;
   --field: #ffffff;
   --line: #e3e8ee;
-  --teal: #0d7a72;
-  --teal-dark: #0a5f59;
-  --teal-soft: #e2f1ef;
+  /* Brand accent — AmarPOS green (token stays --teal so all ~55 screens pick it up). */
+  --teal: #026a40;
+  --teal-dark: #024d2f;
+  --teal-soft: #e7f4ec;
   --amber: #d97706;
   --amber-soft: #fdf1e0;
   --red: #dc2626;
   --red-soft: #fdecec;
   --text: #1b2430;
   --muted: #67737f;
-  --chip-border: #bcdcd8;
+  --chip-border: #a9d5be;
+
+  /* AmarPOS-matched accent tones — theme-aware (soft bg + readable fg).
+     Light: pale tint bg, saturated fg. Used by dashboard stat/quick tiles. */
+  --brand: #026a40;          /* AmarPOS deep green */
+  --brand-2: #009d5d;        /* AmarPOS bright green */
+  --t-green-bg: #e7f4ec;  --t-green-fg: #026a40;
+  --t-blue-bg:  #e8f0fb;  --t-blue-fg:  #1d5fd8;
+  --t-amber-bg: #fdf3d9;  --t-amber-fg: #b07d12;
+  --t-red-bg:   #fdeaea;  --t-red-fg:   #d92020;
+  --t-purple-bg:#f2ebfb;  --t-purple-fg:#6d28d9;
+  --t-orange-bg:#fdeee1;  --t-orange-fg:#d1660f;
   color-scheme: light;
 }
 
@@ -28,16 +40,27 @@
   --card: #171f28;
   --field: #1e2833;
   --line: #2a3540;
-  --teal: #14b8a6;
-  --teal-dark: #0f9488;
-  --teal-soft: #10312e;
+  /* Brand accent — AmarPOS green, dark variant. */
+  --teal: #10b981;
+  --teal-dark: #059669;
+  --teal-soft: #10281c;
   --amber: #f59e0b;
   --amber-soft: #3a2c14;
   --red: #f87171;
   --red-soft: #3a1d1d;
   --text: #e6eaef;
   --muted: #94a3b0;
-  --chip-border: #1f4a44;
+  --chip-border: #1f4a3a;
+
+  /* AmarPOS accent tones — dark variant: deep low-chroma bg, bright fg. */
+  --brand: #10b981;
+  --brand-2: #34d399;
+  --t-green-bg: #10281c;  --t-green-fg: #34d399;
+  --t-blue-bg:  #16233a;  --t-blue-fg:  #7ea9ff;
+  --t-amber-bg: #2c2413;  --t-amber-fg: #f6c445;
+  --t-red-bg:   #2c1717;  --t-red-fg:   #fb7185;
+  --t-purple-bg:#211a33;  --t-purple-fg:#c4a2ff;
+  --t-orange-bg:#2c1f13;  --t-orange-fg:#f4a05a;
   color-scheme: dark;
 }
 
@@ -104,4 +127,46 @@ body {
   .input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
   .th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 10px 12px; }
   .td { padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; }
+
+  /* ---- Dashboard (AmarPOS-style) ---- */
+  /* Section heading with a brand-green rule, matching AmarPOS. */
+  .sec-title {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 14px; color: var(--text);
+  }
+  .sec-title::before {
+    content: ""; width: 4px; height: 16px; border-radius: 4px;
+    background: var(--brand-2);
+  }
+
+  /* Stat / KPI tile — soft tinted card, filled icon chip, big number.
+     Tone is set per-instance via --tone-bg / --tone-fg inline. */
+  .stat {
+    background: var(--tone-bg); border-radius: 14px; padding: 16px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .stat-ico {
+    flex: none; width: 40px; height: 40px; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--tone-fg);
+    background: color-mix(in srgb, var(--tone-fg) 16%, transparent);
+  }
+  .stat-label { font-size: 12px; font-weight: 600; color: var(--tone-fg); }
+  .stat-value { font-size: 24px; font-weight: 800; line-height: 1.15; color: var(--text); letter-spacing: -0.01em; }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Quick-access action tile. */
+  .qa {
+    background: var(--tone-bg); border-radius: 14px; padding: 14px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .qa:hover { transform: translateY(-2px); box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--tone-fg) 60%, transparent); }
+  .qa-ico {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--tone-fg);
+    background: color-mix(in srgb, var(--tone-fg) 16%, transparent);
+  }
+  .qa-label { font-size: 12px; font-weight: 600; color: var(--tone-fg); }
 }
