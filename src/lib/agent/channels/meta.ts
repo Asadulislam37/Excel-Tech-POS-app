@@ -19,6 +19,17 @@ export function verifyMetaSignature(rawBody: string, header: string | null): boo
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+// Gate for inbound webhooks. Enforces the signature when META_APP_SECRET is set;
+// if it isn't configured yet, allows the request but warns (so Messenger can be
+// tested before the App Secret is added). Set META_APP_SECRET for production.
+export function verifyInbound(rawBody: string, header: string | null): boolean {
+  if (!process.env.META_APP_SECRET) {
+    console.warn("[meta] META_APP_SECRET not set — skipping webhook signature check (INSECURE; set it soon)");
+    return true;
+  }
+  return verifyMetaSignature(rawBody, header);
+}
+
 // Messenger allows ~2000 chars/message; WhatsApp ~4096. Keep replies safely under.
 const clip = (text: string, max: number) => (text.length > max ? text.slice(0, max - 1) + "…" : text);
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkVerifyToken, verifyMetaSignature, sendMessengerText } from "@/lib/agent/channels/meta";
+import { checkVerifyToken, verifyInbound, sendMessengerText } from "@/lib/agent/channels/meta";
 import { handleInboundMessage } from "@/lib/agent/channels/inbound";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export function GET(req: NextRequest) {
 // POST — incoming Messenger events (signature-verified).
 export async function POST(req: NextRequest) {
   const raw = await req.text();
-  if (!verifyMetaSignature(raw, req.headers.get("x-hub-signature-256")))
+  if (!verifyInbound(raw, req.headers.get("x-hub-signature-256")))
     return new NextResponse("Invalid signature", { status: 401 });
 
   let body: MessengerBody;
