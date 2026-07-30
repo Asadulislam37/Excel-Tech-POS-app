@@ -119,6 +119,31 @@ So the owner gets a daily report of what customers search on exceltech.com.bd (i
 
 ---
 
+## 4) AI chat assistant on the site
+
+Add an AI chat bubble (bottom-right) powered by the same assistant as the shop's Messenger/website — it answers product, price, stock, and budget questions, suggests products, and can take orders. **One line**, before `</body>`:
+
+```html
+<script src="https://exceltechpos.netlify.app/chat-embed.js" defer></script>
+```
+
+Optional customisation — put this **before** the script tag:
+
+```html
+<script>
+  window.ExcelChatConfig = {
+    title: "Excel Tech Assistant",
+    subtitle: "Ask about products, price & stock",
+    greeting: "Assalamu alaikum! Ask me about any product, price, or stock.",
+    brandColor: "#026a40"
+  };
+</script>
+```
+
+The widget is self-contained (no libraries), namespaced (`.etc-` CSS classes, won't clash with the site), and calls `POST /api/shop/agent` (CORS-enabled). Nothing else to wire up.
+
+---
+
 ## Notes
 
 - No API keys/secrets are required for these read-only endpoints.
