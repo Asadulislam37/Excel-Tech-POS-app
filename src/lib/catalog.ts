@@ -80,6 +80,99 @@ export function getPublishedProduct(slug: string) {
   });
 }
 
+// ── Public API reads (for the exceltech.com.bd website to consume) ────────────
+// Clean, stable JSON shapes so the external site can render products and show
+// live stock straight from the POS (the single source of truth).
+
+export type PublicVariant = {
+  id: string;
+  sku: string;
+  barcode: string | null;
+  color: string | null;
+  size: string | null;
+  price: number; // online price if set, else retail
+  mrp: number | null;
+  stock: number;
+  inStock: boolean;
+};
+export type PublicProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  type: "SERIALIZED" | "STANDARD";
+  brand: string | null;
+  category: string | null;
+  warranty: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  variants: PublicVariant[];
+};
+
+function toPublicVariant(productType: string, v: {
+  id: string; sku: string; barcode: string | null;
+  color: { name: string } | null; size: { name: string } | null;
+  onlinePrice: unknown; salePrice: unknown; mrp: unknown;
+  stockLevels: { quantity: number }[]; _count: { serialUnits: number };
+}): PublicVariant {
+  const stock = variantStock(productType, v);
+  return {
+    id: v.id,
+    sku: v.sku,
+    barcode: v.barcode,
+    color: v.color?.name ?? null,
+    size: v.size?.name ?? null,
+    price: Number(v.onlinePrice ?? v.salePrice),
+    mrp: v.mrp != null ? Number(v.mrp) : null,
+    stock,
+    inStock: stock > 0,
+  };
+}
+
+/** Full published catalog for the website. Optional slug returns one product. */
+export async function listPublicCatalog(slug?: string): Promise<PublicProduct[]> {
+  const products = await prisma.product.findMany({
+    where: { isPublished: true, isActive: true, ...(slug ? { slug } : {}) },
+    include: {
+      brand: true,
+      category: true,
+      warrantyPolicy: true,
+      variants: { where: { isActive: true }, include: PUBLISHED_VARIANT_INCLUDE },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    type: p.type as "SERIALIZED" | "STANDARD",
+    brand: p.brand?.name ?? null,
+    category: p.category?.name ?? null,
+    warranty: p.warrantyPolicy?.name ?? null,
+    description: p.description,
+    imageUrl: p.imageUrl,
+    variants: p.variants.map((v) => toPublicVariant(p.type, v)),
+  }));
+}
+
+/** Live stock keyed by SKU. Pass `skus` to limit; omit for all published. */
+export async function publicStockBySku(skus?: string[]): Promise<Record<string, number>> {
+  const variants = await prisma.productVariant.findMany({
+    where: {
+      isActive: true,
+      product: { isPublished: true, isActive: true },
+      ...(skus && skus.length ? { sku: { in: skus } } : {}),
+    },
+    include: {
+      product: { select: { type: true } },
+      stockLevels: true,
+      _count: { select: { serialUnits: { where: { status: "IN_STOCK" } } } },
+    },
+  });
+  const map: Record<string, number> = {};
+  for (const v of variants) map[v.sku] = variantStock(v.product.type, v);
+  return map;
+}
+
 // ── Agent-facing reads (compact, JSON-friendly shapes for the LLM) ─────────────
 
 export type AgentVariant = {
