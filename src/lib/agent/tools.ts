@@ -3,7 +3,7 @@
 // logic, so the agent obeys the exact same rules as the storefront and POS.
 import { Type, type Schema } from "@google/genai";
 import type { AgentTool } from "@/lib/agent/run";
-import { agentSearchCatalog, agentGetVariant } from "@/lib/catalog";
+import { agentSearchCatalog, agentGetVariant, agentProductsByBudget } from "@/lib/catalog";
 import { createOnlineOrder, OrderError, type CreateOnlineOrderInput } from "@/lib/online-order";
 import { getDeliveryCharges, getPreorderEnabled } from "@/lib/settings";
 import { businessSummary, lowStock, deadStock, topProducts } from "@/lib/agent/metrics";
@@ -51,6 +51,31 @@ const getVariant: AgentTool = {
     const v = await agentGetVariant(String(args.variantId ?? ""));
     return v ?? { error: "No such variant, or it is not available online." };
   },
+};
+
+const suggestByBudget: AgentTool = {
+  declaration: {
+    name: "suggest_by_budget",
+    description:
+      "Recommend in-stock products within the customer's budget (price in BDT taka). Use when a customer " +
+      "gives a budget — e.g. '10000 takar moddhe phone', 'cover under 500', 'bajet 2000'. Works for phones " +
+      "(mobiles) and accessories. Optionally narrow by category/keyword (e.g. 'phone', 'cover', 'charger', a brand).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        maxPrice: { type: Type.NUMBER, description: "Maximum budget in BDT taka." },
+        minPrice: { type: Type.NUMBER, description: "Optional minimum price in taka." },
+        category: { type: Type.STRING, description: "Optional keyword: 'phone', 'cover', 'charger', 'earbuds', a brand, etc." },
+      },
+      required: ["maxPrice"],
+    },
+  },
+  run: async (args) =>
+    agentProductsByBudget({
+      maxPrice: Number(args.maxPrice) || 0,
+      minPrice: args.minPrice != null ? Number(args.minPrice) : undefined,
+      category: args.category ? String(args.category) : undefined,
+    }),
 };
 
 const deliveryCharges: AgentTool = {
@@ -186,6 +211,7 @@ const requestHuman: AgentTool = {
 
 export const customerTools: AgentTool[] = [
   searchCatalog,
+  suggestByBudget,
   getVariant,
   deliveryCharges,
   placeOrder,

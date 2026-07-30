@@ -157,6 +157,75 @@ export async function agentSearchCatalog(
   }));
 }
 
+/**
+ * Recommend published, in-stock products within a budget (price range). Works
+ * for phones and accessories. Optional `category` matches category or product
+ * name (e.g. "phone", "cover", "charger"). Returns products with only the
+ * variants that fit the budget, cheapest first.
+ */
+export async function agentProductsByBudget(opts: {
+  maxPrice: number;
+  minPrice?: number;
+  category?: string;
+  limit?: number;
+}): Promise<AgentProduct[]> {
+  const { maxPrice, minPrice = 0, category, limit = 8 } = opts;
+  const cat = category?.trim();
+  const products = await prisma.product.findMany({
+    where: {
+      isPublished: true,
+      isActive: true,
+      ...(cat
+        ? {
+            OR: [
+              { name: { contains: cat, mode: "insensitive" } },
+              { category: { name: { contains: cat, mode: "insensitive" } } },
+              { brand: { name: { contains: cat, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    },
+    include: {
+      brand: true,
+      variants: { where: { isActive: true }, include: PUBLISHED_VARIANT_INCLUDE },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
+  const priceOf = (v: { onlinePrice: unknown; salePrice: unknown }) => Number(v.onlinePrice ?? v.salePrice);
+  const result = products
+    .map((p) => {
+      const variants = p.variants
+        .map((v) => {
+          const stock = variantStock(p.type, v);
+          return {
+            variantId: v.id,
+            sku: v.sku,
+            label: [v.color?.name, v.size?.name].filter(Boolean).join(" · "),
+            price: priceOf(v),
+            mrp: v.mrp != null ? Number(v.mrp) : null,
+            stock,
+            inStock: stock > 0,
+          };
+        })
+        .filter((v) => v.inStock && v.price >= minPrice && v.price <= maxPrice);
+      return {
+        name: p.name,
+        slug: p.slug,
+        url: productUrl(p.slug),
+        brand: p.brand?.name ?? null,
+        type: p.type as "SERIALIZED" | "STANDARD",
+        description: p.description,
+        variants,
+      };
+    })
+    .filter((p) => p.variants.length > 0);
+
+  const cheapest = (p: AgentProduct) => Math.min(...p.variants.map((v) => v.price));
+  return result.sort((a, b) => cheapest(a) - cheapest(b)).slice(0, Math.min(Math.max(limit, 1), 20));
+}
+
 /** Look up one published variant (by id) with live stock — used before ordering. */
 export async function agentGetVariant(variantId: string): Promise<
   (AgentVariant & { productName: string; slug: string }) | null
