@@ -44,6 +44,45 @@ export type SearchReport = {
   unmetDemand: { query: string; times: number }[]; // searches that returned 0 results
 };
 
+/** Build the daily demand email (search report + optional today's-sales line). */
+export function searchReportEmailHtml(
+  report: SearchReport,
+  today?: { orders: number; revenue: number; currency: string }
+): string {
+  const row = (a: string, b: string | number) =>
+    `<tr><td style="padding:6px 10px;border-top:1px solid #e3e8ee">${a}</td><td style="padding:6px 10px;border-top:1px solid #e3e8ee;text-align:right;font-weight:600">${b}</td></tr>`;
+  const topRows = report.top.length
+    ? report.top.map((t) => row(t.query, t.count)).join("")
+    : `<tr><td colspan="2" style="padding:10px;color:#67737f">No searches yet.</td></tr>`;
+  const unmetRows = report.unmetDemand.length
+    ? report.unmetDemand.map((u) => row(u.query, u.times)).join("")
+    : `<tr><td colspan="2" style="padding:10px;color:#67737f">Nothing — every search found a result. 🎉</td></tr>`;
+  const dateStr = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const salesLine = today
+    ? `<p style="margin:0 0 4px"><b>Today so far:</b> ${today.orders} order(s), ${today.currency === "BDT" ? "৳" : ""}${today.revenue.toLocaleString()} revenue.</p>`
+    : "";
+
+  return `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:auto;color:#1b2430">
+    <div style="background:#026a40;color:#fff;padding:18px 24px;border-radius:10px 10px 0 0">
+      <h2 style="margin:0;font-size:18px">Excel Tech — Daily Demand</h2>
+      <div style="font-size:12px;opacity:.85">${dateStr}</div>
+    </div>
+    <div style="border:1px solid #e3e8ee;border-top:none;padding:20px 24px;border-radius:0 0 10px 10px">
+      ${salesLine}
+      <p style="margin:0 0 14px;color:#67737f;font-size:13px">${report.totalSearches} searches (last ${report.days === 1 ? "24h" : report.days + " days"}), ${report.uniqueQueries} unique.</p>
+
+      <h3 style="margin:16px 0 6px;font-size:14px;color:#024d2f">🔎 Unmet demand — searched but NOT found</h3>
+      <p style="margin:0 0 6px;font-size:12px;color:#67737f">These are your best stocking / sourcing opportunities.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>${unmetRows}</tbody></table>
+
+      <h3 style="margin:20px 0 6px;font-size:14px;color:#024d2f">Top searches</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>${topRows}</tbody></table>
+
+      <p style="margin:18px 0 0;font-size:11px;color:#98a2ad">Automated daily report from your Excel Tech POS AI.</p>
+    </div>
+  </div>`;
+}
+
 /** Aggregate searches over the last `days` (default 1 = last 24h). */
 export async function searchReport(days = 1): Promise<SearchReport> {
   const cutoff = Date.now() - days * 86400_000;
