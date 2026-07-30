@@ -9,7 +9,7 @@ import { analyzeCoverPhoto } from "@/lib/agent/vision";
 import { saveSourcingRequest } from "@/lib/sourcing";
 
 export async function handleInboundMessage(opts: {
-  channel: "messenger" | "whatsapp";
+  channel: "messenger" | "whatsapp" | "instagram";
   externalId: string; // PSID (Messenger) or phone number (WhatsApp)
   messageId?: string;
   text: string;
@@ -49,7 +49,7 @@ export async function handleInboundMessage(opts: {
 // log a sourcing request for the owner, acknowledge the customer, and step back
 // so the owner can source + quote.
 export async function handleInboundImage(opts: {
-  channel: "messenger" | "whatsapp";
+  channel: "messenger" | "whatsapp" | "instagram";
   externalId: string;
   messageId?: string;
   base64: string;

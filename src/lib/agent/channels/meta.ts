@@ -48,6 +48,19 @@ export async function sendMessengerText(psid: string, text: string): Promise<voi
   if (!res.ok) console.error("[messenger] send failed", res.status, await res.text().catch(() => ""));
 }
 
+// Instagram DMs go through the same Page-token /me/messages endpoint (the IG
+// Professional account must be linked to the Page, app needs instagram_manage_messages).
+export async function sendInstagramText(igsid: string, text: string): Promise<void> {
+  const token = process.env.MESSENGER_PAGE_TOKEN;
+  if (!token) return void console.error("[instagram] MESSENGER_PAGE_TOKEN not set");
+  const res = await fetch(`${GRAPH}/me/messages?access_token=${encodeURIComponent(token)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recipient: { id: igsid }, messaging_type: "RESPONSE", message: { text: clip(text, 950) } }),
+  });
+  if (!res.ok) console.error("[instagram] send failed", res.status, await res.text().catch(() => ""));
+}
+
 // Fetch an image and return it base64-encoded for Gemini vision. Caps size.
 export async function fetchImageAsBase64(
   url: string,
