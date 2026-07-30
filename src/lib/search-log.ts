@@ -8,13 +8,25 @@
 import { prisma } from "@/lib/prisma";
 
 const PREFIX = "search:log:";
-const KEY_END = "search:log;"; // ';' = ':'+1, upper bound for the prefix range
 
 type LogEntry = { q: string; n: number; s: string; t: number };
 
+// Use startsWith (LIKE 'prefix%') + in-code time filtering. Key-RANGE queries
+// (gte/lt) are unreliable here because the DB text collation orders ':' / ';'
+// and digits differently than ASCII.
 async function pruneOld(days = 60): Promise<void> {
   const cutoff = Date.now() - days * 86400_000;
-  await prisma.setting.deleteMany({ where: { key: { gte: PREFIX, lt: `${PREFIX}${cutoff}` } } });
+  const rows = await prisma.setting.findMany({ where: { key: { startsWith: PREFIX } }, select: { key: true, value: true } });
+  const oldKeys = rows
+    .filter((r) => {
+      try {
+        return (JSON.parse(r.value) as LogEntry).t < cutoff;
+      } catch {
+        return false;
+      }
+    })
+    .map((r) => r.key);
+  if (oldKeys.length) await prisma.setting.deleteMany({ where: { key: { in: oldKeys } } });
 }
 
 /** Record one search. Never throws — logging must not break search. */
@@ -86,9 +98,7 @@ export function searchReportEmailHtml(
 /** Aggregate searches over the last `days` (default 1 = last 24h). */
 export async function searchReport(days = 1): Promise<SearchReport> {
   const cutoff = Date.now() - days * 86400_000;
-  const rows = await prisma.setting.findMany({
-    where: { key: { gte: `${PREFIX}${cutoff}`, lt: KEY_END } },
-  });
+  const rows = await prisma.setting.findMany({ where: { key: { startsWith: PREFIX } } });
   const entries = rows
     .map((r) => {
       try {
@@ -97,7 +107,7 @@ export async function searchReport(days = 1): Promise<SearchReport> {
         return null;
       }
     })
-    .filter((x): x is LogEntry => x !== null);
+    .filter((x): x is LogEntry => x !== null && x.t >= cutoff);
 
   const byQ = new Map<string, { count: number; zero: number }>();
   for (const e of entries) {
