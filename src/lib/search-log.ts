@@ -29,16 +29,19 @@ async function pruneOld(days = 60): Promise<void> {
   if (oldKeys.length) await prisma.setting.deleteMany({ where: { key: { in: oldKeys } } });
 }
 
-/** Record one search. Never throws — logging must not break search. */
-export async function logSearch(rawQuery: string, resultCount: number, source: "web" | "chat" = "web"): Promise<void> {
+/** Record one search. Never throws — logging must not break search.
+ *  resultCount: number of results, or -1 when unknown (external sites that
+ *  don't report it). -1 is stored as-is so it is NOT counted as "unmet demand". */
+export async function logSearch(rawQuery: string, resultCount: number, source: string = "web"): Promise<void> {
   const q = (rawQuery || "").trim().replace(/\s+/g, " ").slice(0, 80).toLowerCase();
   if (q.length < 2) return; // ignore 1-char / empty noise
   try {
     const t = Date.now();
+    const n = Number.isFinite(resultCount) ? Math.trunc(resultCount) : -1;
     await prisma.setting.create({
       data: {
         key: `${PREFIX}${t}-${Math.random().toString(36).slice(2, 7)}`,
-        value: JSON.stringify({ q, n: Math.max(0, resultCount | 0), s: source, t } satisfies LogEntry),
+        value: JSON.stringify({ q, n, s: source, t } satisfies LogEntry),
       },
     });
     if (Math.random() < 0.03) await pruneOld(); // occasional cleanup
