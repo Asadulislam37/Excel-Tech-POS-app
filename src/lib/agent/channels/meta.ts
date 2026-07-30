@@ -48,6 +48,46 @@ export async function sendMessengerText(psid: string, text: string): Promise<voi
   if (!res.ok) console.error("[messenger] send failed", res.status, await res.text().catch(() => ""));
 }
 
+// Fetch an image and return it base64-encoded for Gemini vision. Caps size.
+export async function fetchImageAsBase64(
+  url: string,
+  authHeader?: string
+): Promise<{ base64: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(url, authHeader ? { headers: { Authorization: authHeader } } : undefined);
+    if (!res.ok) {
+      console.error("[meta] image fetch failed", res.status);
+      return null;
+    }
+    const mimeType = (res.headers.get("content-type") || "image/jpeg").split(";")[0];
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 6_000_000) {
+      console.error("[meta] image too large", buf.length);
+      return null;
+    }
+    return { base64: buf.toString("base64"), mimeType };
+  } catch (e) {
+    console.error("[meta] image fetch error", e);
+    return null;
+  }
+}
+
+// WhatsApp media arrives as an id; resolve it to a (token-authenticated) URL.
+export async function fetchWhatsAppMedia(mediaId: string): Promise<{ base64: string; mimeType: string } | null> {
+  const token = process.env.WHATSAPP_TOKEN;
+  if (!token) return null;
+  try {
+    const meta = await fetch(`${GRAPH}/${mediaId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!meta.ok) return null;
+    const j = (await meta.json()) as { url?: string };
+    if (!j.url) return null;
+    return fetchImageAsBase64(j.url, `Bearer ${token}`);
+  } catch (e) {
+    console.error("[whatsapp] media fetch error", e);
+    return null;
+  }
+}
+
 export async function sendWhatsAppText(to: string, text: string): Promise<void> {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;

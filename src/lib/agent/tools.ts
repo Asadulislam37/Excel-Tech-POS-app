@@ -7,7 +7,7 @@ import { agentSearchCatalog, agentGetVariant } from "@/lib/catalog";
 import { createOnlineOrder, OrderError, type CreateOnlineOrderInput } from "@/lib/online-order";
 import { getDeliveryCharges, getPreorderEnabled } from "@/lib/settings";
 import { businessSummary, lowStock, deadStock, topProducts } from "@/lib/agent/metrics";
-import { getSourcingSettings, calculateSourcingPrice } from "@/lib/sourcing";
+import { getSourcingSettings, calculateSourcingPrice, listSourcingRequests, searchLinks } from "@/lib/sourcing";
 
 // ── Customer tools ────────────────────────────────────────────────────────────
 
@@ -271,11 +271,42 @@ const sourcingQuoteTool: AgentTool = {
   },
 };
 
+const sourcingRequestsTool: AgentTool = {
+  declaration: {
+    name: "list_sourcing_requests",
+    description:
+      "List recent customer photo sourcing requests (covers/accessories customers asked the AI to find " +
+      "on Taobao/Pinduoduo). Each includes the image analysis, Chinese + English search keywords, and " +
+      "ready-to-tap Taobao/1688/Pinduoduo search links. Use when the owner asks about pending sourcing " +
+      "or wants what to search for.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { limit: { type: Type.INTEGER, description: "How many recent requests (default 10)." } },
+    },
+  },
+  run: async (args) => {
+    const reqs = await listSourcingRequests(Number(args.limit) || 10);
+    return reqs.map((r) => ({
+      when: new Date(r.createdAt).toISOString(),
+      channel: r.channel,
+      customer: r.customerName || r.externalId,
+      phoneModel: r.phoneModel || "(unknown)",
+      description: r.description,
+      keywordsChinese: r.keywordsChinese,
+      keywordsEnglish: r.keywordsEnglish,
+      searchLinks: searchLinks(r.keywordsChinese || r.keywordsEnglish),
+      photoUrl: r.photoUrl,
+      status: r.status,
+    }));
+  },
+};
+
 export const ownerTools: AgentTool[] = [
   businessSummaryTool,
   lowStockTool,
   deadStockTool,
   topProductsTool,
   sourcingQuoteTool,
+  sourcingRequestsTool,
   searchCatalog, // owners can also look up stock/price
 ];

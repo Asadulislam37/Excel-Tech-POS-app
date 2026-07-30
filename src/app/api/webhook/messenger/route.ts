@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkVerifyToken, verifyInbound, sendMessengerText } from "@/lib/agent/channels/meta";
-import { handleInboundMessage } from "@/lib/agent/channels/inbound";
+import { checkVerifyToken, verifyInbound, sendMessengerText, fetchImageAsBase64 } from "@/lib/agent/channels/meta";
+import { handleInboundMessage, handleInboundImage } from "@/lib/agent/channels/inbound";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
+type MessengerAttachment = { type?: string; payload?: { url?: string } };
 type MessengerEvent = {
   sender?: { id?: string };
-  message?: { text?: string; mid?: string; is_echo?: boolean };
+  message?: { text?: string; mid?: string; is_echo?: boolean; attachments?: MessengerAttachment[] };
 };
 type MessengerBody = { object?: string; entry?: { messaging?: MessengerEvent[] }[] };
 
@@ -38,12 +39,34 @@ export async function POST(req: NextRequest) {
       for (const ev of entry.messaging ?? []) {
         if (ev.message?.is_echo) continue; // ignore the page's own outgoing messages
         const psid = ev.sender?.id;
+        if (!psid) continue;
+        const mid = ev.message?.mid;
         const text = ev.message?.text;
-        if (psid && text) {
+
+        // Photo → sourcing intake (first image attachment wins).
+        const imageUrl = ev.message?.attachments?.find((a) => a.type === "image")?.payload?.url;
+        if (imageUrl) {
+          const img = await fetchImageAsBase64(imageUrl);
+          if (img) {
+            await handleInboundImage({
+              channel: "messenger",
+              externalId: psid,
+              messageId: mid,
+              base64: img.base64,
+              mimeType: img.mimeType,
+              caption: text,
+              photoUrl: imageUrl,
+              send: (t) => sendMessengerText(psid, t),
+            });
+          }
+          continue;
+        }
+
+        if (text) {
           await handleInboundMessage({
             channel: "messenger",
             externalId: psid,
-            messageId: ev.message?.mid,
+            messageId: mid,
             text,
             send: (t) => sendMessengerText(psid, t),
           });

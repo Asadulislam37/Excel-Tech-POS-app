@@ -6,6 +6,11 @@
 //   STANDARD products (accessories)   → sum of StockLevel.quantity across outlets.
 import { prisma } from "@/lib/prisma";
 
+// Public storefront base for shareable product links (set STOREFRONT_URL to your
+// domain, e.g. https://exceltech.com.bd, once it serves the shop).
+const STOREFRONT = (process.env.STOREFRONT_URL || "https://exceltechpos.netlify.app").replace(/\/$/, "");
+export const productUrl = (slug: string) => `${STOREFRONT}/shop/${slug}`;
+
 // Include used everywhere we need to compute a published variant's stock.
 export const PUBLISHED_VARIANT_INCLUDE = {
   color: true,
@@ -90,6 +95,7 @@ export type AgentVariant = {
 export type AgentProduct = {
   name: string;
   slug: string;
+  url: string; // shareable storefront link
   brand: string | null;
   type: "SERIALIZED" | "STANDARD";
   description: string | null;
@@ -132,6 +138,7 @@ export async function agentSearchCatalog(
   return products.map((p) => ({
     name: p.name,
     slug: p.slug,
+    url: productUrl(p.slug),
     brand: p.brand?.name ?? null,
     type: p.type as "SERIALIZED" | "STANDARD",
     description: p.description,

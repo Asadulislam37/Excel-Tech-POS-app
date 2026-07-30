@@ -49,6 +49,58 @@ export async function saveSourcingSettings(s: SourcingSettings): Promise<void> {
   );
 }
 
+// ── Sourcing requests (customer photos to source) ────────────────────────────
+// Stored in the Setting table (no schema migration) under a namespaced key.
+const SR_PREFIX = "agent:sourcing:req:";
+
+export type SourcingRequest = {
+  id: string;
+  channel: string; // messenger | whatsapp | web
+  externalId: string; // PSID / phone
+  customerName?: string;
+  photoUrl?: string;
+  description: string;
+  phoneModel: string;
+  keywordsChinese: string;
+  keywordsEnglish: string;
+  status: "pending" | "quoted" | "done";
+  createdAt: number;
+};
+
+/** Chinese-keyword search links the owner can tap to find the item fast. */
+export function searchLinks(keywords: string) {
+  const q = encodeURIComponent(keywords || "");
+  return {
+    taobao: `https://s.taobao.com/search?q=${q}`,
+    alibaba1688: `https://s.1688.com/selloffer/offer_search.htm?keywords=${q}`,
+    pinduoduo: `https://mobile.yangkeduo.com/search_result.html?search_key=${q}`,
+  };
+}
+
+export async function saveSourcingRequest(
+  r: Omit<SourcingRequest, "id" | "createdAt" | "status"> & { status?: SourcingRequest["status"] }
+): Promise<SourcingRequest> {
+  const createdAt = Date.now();
+  const id = `${createdAt}-${Math.random().toString(36).slice(2, 7)}`;
+  const full: SourcingRequest = { id, createdAt, status: r.status ?? "pending", ...r };
+  await prisma.setting.create({ data: { key: SR_PREFIX + id, value: JSON.stringify(full) } });
+  return full;
+}
+
+export async function listSourcingRequests(limit = 20): Promise<SourcingRequest[]> {
+  const rows = await prisma.setting.findMany({ where: { key: { startsWith: SR_PREFIX } } });
+  const items = rows
+    .map((r) => {
+      try {
+        return JSON.parse(r.value) as SourcingRequest;
+      } catch {
+        return null;
+      }
+    })
+    .filter((x): x is SourcingRequest => x !== null);
+  return items.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+}
+
 export type SourcingQuote = {
   rmb: number;
   rate: number;

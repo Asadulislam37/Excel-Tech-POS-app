@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkVerifyToken, verifyInbound, sendWhatsAppText } from "@/lib/agent/channels/meta";
-import { handleInboundMessage } from "@/lib/agent/channels/inbound";
+import { checkVerifyToken, verifyInbound, sendWhatsAppText, fetchWhatsAppMedia } from "@/lib/agent/channels/meta";
+import { handleInboundMessage, handleInboundImage } from "@/lib/agent/channels/inbound";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-type WaMessage = { from?: string; id?: string; type?: string; text?: { body?: string } };
+type WaMessage = {
+  from?: string;
+  id?: string;
+  type?: string;
+  text?: { body?: string };
+  image?: { id?: string; caption?: string };
+};
 type WaChange = { value?: { messages?: WaMessage[] } };
 type WaBody = { object?: string; entry?: { changes?: WaChange[] }[] };
 
@@ -37,8 +43,27 @@ export async function POST(req: NextRequest) {
         // change.value also carries `statuses` (delivery receipts) — we ignore those.
         for (const msg of change.value?.messages ?? []) {
           const from = msg.from;
+          if (!from) continue;
+
+          // Photo → sourcing intake.
+          if (msg.type === "image" && msg.image?.id) {
+            const img = await fetchWhatsAppMedia(msg.image.id);
+            if (img) {
+              await handleInboundImage({
+                channel: "whatsapp",
+                externalId: from,
+                messageId: msg.id,
+                base64: img.base64,
+                mimeType: img.mimeType,
+                caption: msg.image.caption,
+                send: (t) => sendWhatsAppText(from, t),
+              });
+            }
+            continue;
+          }
+
           const text = msg.type === "text" ? msg.text?.body : undefined;
-          if (from && text) {
+          if (text) {
             await handleInboundMessage({
               channel: "whatsapp",
               externalId: from,
