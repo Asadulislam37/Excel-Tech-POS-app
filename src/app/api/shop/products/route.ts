@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listPublishedProducts, getPublishedProduct } from "@/lib/catalog";
+import { logSearch } from "@/lib/search-log";
 
 export const dynamic = "force-dynamic";
 
@@ -19,5 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { products, brands } = await listPublishedProducts({ q, brand });
+  // Record what customers search (demand signal) — only real queries, not brand filters.
+  if (q) await logSearch(q, products.length, "web");
   return NextResponse.json({ products, brands });
 }

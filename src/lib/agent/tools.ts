@@ -8,6 +8,7 @@ import { createOnlineOrder, OrderError, type CreateOnlineOrderInput } from "@/li
 import { getDeliveryCharges, getPreorderEnabled } from "@/lib/settings";
 import { businessSummary, lowStock, deadStock, topProducts } from "@/lib/agent/metrics";
 import { getSourcingSettings, calculateSourcingPrice, listSourcingRequests, searchLinks } from "@/lib/sourcing";
+import { searchReport } from "@/lib/search-log";
 
 // ── Customer tools ────────────────────────────────────────────────────────────
 
@@ -301,6 +302,21 @@ const sourcingRequestsTool: AgentTool = {
   },
 };
 
+const searchReportTool: AgentTool = {
+  declaration: {
+    name: "search_report",
+    description:
+      "Report what customers searched for on the website store — the top searches AND, most importantly, " +
+      "searches that returned NO results (unmet demand: what people want that you don't stock/publish). " +
+      "Use for 'what are people searching', 'what's in demand', 'today's searches', 'what should I stock'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { days: { type: Type.INTEGER, description: "Look-back window in days (default 1 = last 24h). Use 7 for the week, 30 for the month." } },
+    },
+  },
+  run: async (args) => searchReport(Math.max(1, Number(args.days) || 1)),
+};
+
 export const ownerTools: AgentTool[] = [
   businessSummaryTool,
   lowStockTool,
@@ -308,5 +324,6 @@ export const ownerTools: AgentTool[] = [
   topProductsTool,
   sourcingQuoteTool,
   sourcingRequestsTool,
+  searchReportTool,
   searchCatalog, // owners can also look up stock/price
 ];
