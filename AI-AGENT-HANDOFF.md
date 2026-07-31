@@ -16,7 +16,7 @@ A **free** AI sales + owner assistant built into the Excel Tech POS, working acr
 
 | # | Feature | Status |
 |---|---|---|
-| 1 | Messenger / WhatsApp / Instagram chat | Messenger **LIVE**; WhatsApp **needs `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID`**; Instagram code live, needs Meta IG setup |
+| 1 | Chat channels | **Messenger LIVE.** Owner decided 2026-07-31 to go **Messenger-only** — WhatsApp + Instagram SKIPPED (code stays, dormant). |
 | 2 | Website demand report (exceltech.com.bd) | **Done** — search tracking + daily email |
 | 3 | Collect orders (FB/WA/IG) → admin | **Done** — bot books into POS **Online Orders** |
 | 4 | POS stock → website | **POS side done** — dev connects website (public API) |
@@ -57,14 +57,14 @@ A **free** AI sales + owner assistant built into the Excel Tech POS, working acr
 - **MISSING / needed for WhatsApp:** `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`.
 - **Optional:** `GEMINI_CUSTOMER_MODEL`, `GEMINI_OWNER_MODEL`, `GEMINI_VISION_MODEL`, `STOREFRONT_URL`, `CORS_ALLOW_ORIGIN`.
 
-## What the OWNER still needs to do
+## What the OWNER still needs to do (Messenger-only path)
 
-1. **WhatsApp:** give `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` (Meta → WhatsApp → API Setup).
-2. **Instagram:** link IG Professional acct to the Page; Meta app → add Instagram; webhook callback `https://exceltechpos.netlify.app/api/webhook/instagram` + verify token `exceltech_verify_2026` + subscribe `messages`; grant `instagram_manage_messages`.
-3. **Publish products (with images) in the POS** — the bot + website need a catalog.
-4. **Give the developer `WEBSITE-INTEGRATION.md`** — connects exceltech.com.bd.
-5. **Messenger App Review** — to reply to real customers (not just testers).
-6. **Train the chatbot:** Configuration → Train AI Chatbot.
+1. **Publish products (with images) in the POS** — the bot + website need a catalog.
+2. **Give the developer `WEBSITE-INTEGRATION.md`** — connects exceltech.com.bd (products, stock, search tracking, AI chat widget).
+3. **Messenger App Review + switch app to Live** — so the bot replies to **real customers**, not just testers (app is in Development mode now).
+4. **Train the chatbot:** Configuration → Train AI Chatbot.
+
+_WhatsApp + Instagram are SKIPPED for now (owner's decision). If revisited later: WhatsApp needs `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` from Meta → WhatsApp → API Setup, subscribe the `messages` webhook field, and publish the app; Instagram needs the IG acct linked to the Page + `instagram_manage_messages`._
 
 ## Deploy flow
 
