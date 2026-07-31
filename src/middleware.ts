@@ -32,7 +32,8 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Run on everything except Next internals and static files.
+// Run on everything except Next internals and static files (public/ assets like
+// chat-embed.js must load without an auth redirect).
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|txt|map|woff2?)$).*)"],
 };
