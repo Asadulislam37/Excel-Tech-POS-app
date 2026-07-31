@@ -46,10 +46,17 @@
   style.textContent = css;
   document.head.appendChild(style);
 
-  var btn = document.createElement("button");
-  btn.className = "etc-btn";
-  btn.setAttribute("aria-label", "Chat with us");
-  btn.innerHTML = "&#128172;";
+  // Set window.ExcelChatConfig.showBubble = false to hide the built-in bubble and
+  // open the chat from your own button via window.ExcelChat.open().
+  var SHOW_BUBBLE = cfg.showBubble !== false;
+
+  var btn = null;
+  if (SHOW_BUBBLE) {
+    btn = document.createElement("button");
+    btn.className = "etc-btn";
+    btn.setAttribute("aria-label", "Chat with us");
+    btn.innerHTML = "&#128172;";
+  }
 
   var panel = document.createElement("div");
   panel.className = "etc-panel";
@@ -58,7 +65,7 @@
     '<div class="etc-body"></div>' +
     '<div class="etc-foot"><textarea class="etc-in" rows="1" placeholder="Type your message…"></textarea><button class="etc-send" aria-label="Send">&#10148;</button></div>';
 
-  document.body.appendChild(btn);
+  if (btn) document.body.appendChild(btn);
   document.body.appendChild(panel);
 
   var body = panel.querySelector(".etc-body");
@@ -70,9 +77,16 @@
   function toggle(show) {
     var on = show == null ? !panel.classList.contains("etc-open") : show;
     panel.classList.toggle("etc-open", on);
-    btn.innerHTML = on ? "&times;" : "&#128172;";
+    if (btn) btn.innerHTML = on ? "&times;" : "&#128172;";
     if (on) { render(); input.focus(); }
   }
+
+  // Public API so the site's own support widget can open/close the chat.
+  window.ExcelChat = {
+    open: function () { toggle(true); },
+    close: function () { toggle(false); },
+    toggle: function () { toggle(); },
+  };
 
   function render() {
     if (!messages.length) {
@@ -110,7 +124,7 @@
       .then(function () { busy = false; render(); });
   }
 
-  btn.addEventListener("click", function () { toggle(); });
+  if (btn) btn.addEventListener("click", function () { toggle(); });
   panel.querySelector(".etc-x").addEventListener("click", function () { toggle(false); });
   sendBtn.addEventListener("click", send);
   input.addEventListener("keydown", function (e) {

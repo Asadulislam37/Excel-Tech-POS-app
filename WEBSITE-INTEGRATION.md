@@ -142,6 +142,24 @@ Optional customisation — put this **before** the script tag:
 
 The widget is self-contained (no libraries), namespaced (`.etc-` CSS classes, won't clash with the site), and calls `POST /api/shop/agent` (CORS-enabled). Nothing else to wire up.
 
+### Add it into the EXISTING floating support widget (recommended for this site)
+
+The site already has a floating contact widget (Messenger / WhatsApp / Call). To add **AI Chat** into that same widget instead of showing a second bubble:
+
+1. Load the script with the built-in bubble **disabled**:
+   ```html
+   <script>window.ExcelChatConfig = { showBubble: false };</script>
+   <script src="https://exceltechpos.netlify.app/chat-embed.js" defer></script>
+   ```
+2. **Remove the "Call" button** from the existing widget (per the owner's request).
+3. **Add an "AI Chat" button** to the widget whose click handler calls:
+   ```js
+   window.ExcelChat.open();   // opens the AI chat panel
+   ```
+   (Also available: `window.ExcelChat.close()` and `window.ExcelChat.toggle()`.)
+
+That's it — the AI chat opens from your own button, styled to match the widget, with no duplicate bubble.
+
 ---
 
 ## Notes
