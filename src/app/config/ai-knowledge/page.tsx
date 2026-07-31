@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GraduationCap, Check } from "lucide-react";
+import { GraduationCap, Check, MessageSquare } from "lucide-react";
+import AgentChat from "@/components/AgentChat";
 
 const PLACEHOLDER = `Write anything you want the AI to know — in Bangla, English, or Banglish. For example:
 
@@ -92,6 +93,21 @@ export default function AiKnowledgePage() {
             </button>
           </>
         )}
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="border-b border-line px-4 py-3">
+          <div className="flex items-center gap-2 text-[14px] font-semibold"><MessageSquare size={15} /> Talk to your chatbot (test it)</div>
+          <p className="mt-0.5 text-[12px] text-muted">
+            Chat here exactly like a customer would, to check it answers correctly. <b>Save your knowledge above first</b>, then test — it uses your live products + what you trained.
+          </p>
+        </div>
+        <AgentChat
+          endpoint="/api/shop/agent"
+          className="h-[440px]"
+          greeting="Test me like a customer! Ask about products, price, delivery, warranty — anything you trained me on."
+          suggestions={["ki ki phone ache?", "delivery charge koto?", "10000 er moddhe phone?"]}
+        />
       </div>
 
       <div className="card p-5 text-[12.5px] text-body">
