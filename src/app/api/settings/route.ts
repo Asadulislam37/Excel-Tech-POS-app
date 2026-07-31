@@ -4,6 +4,8 @@ import {
   saveDeliveryCharges,
   getPreorderEnabled,
   savePreorderEnabled,
+  getAgentKnowledge,
+  saveAgentKnowledge,
 } from "@/lib/settings";
 import { getSourcingSettings, saveSourcingSettings, type SourcingSettings } from "@/lib/sourcing";
 
@@ -11,12 +13,13 @@ export const dynamic = "force-dynamic";
 
 // GET /api/settings → current shop-wide settings
 export async function GET() {
-  const [delivery, preorder, sourcing] = await Promise.all([
+  const [delivery, preorder, sourcing, knowledge] = await Promise.all([
     getDeliveryCharges(),
     getPreorderEnabled(),
     getSourcingSettings(),
+    getAgentKnowledge(),
   ]);
-  return NextResponse.json({ delivery, preorder, sourcing });
+  return NextResponse.json({ delivery, preorder, sourcing, knowledge });
 }
 
 // POST /api/settings — updates whichever keys are present:
@@ -36,6 +39,10 @@ export async function POST(req: NextRequest) {
     await savePreorderEnabled(body.preorder);
   }
 
+  if (typeof body?.knowledge === "string") {
+    await saveAgentKnowledge(body.knowledge);
+  }
+
   if (body?.sourcing) {
     const s = body.sourcing as Partial<SourcingSettings>;
     const nums = [s.rate, s.shipping, s.profit, s.round].map(Number);
@@ -49,10 +56,11 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const [delivery, preorder, sourcing] = await Promise.all([
+  const [delivery, preorder, sourcing, knowledge] = await Promise.all([
     getDeliveryCharges(),
     getPreorderEnabled(),
     getSourcingSettings(),
+    getAgentKnowledge(),
   ]);
-  return NextResponse.json({ delivery, preorder, sourcing });
+  return NextResponse.json({ delivery, preorder, sourcing, knowledge });
 }

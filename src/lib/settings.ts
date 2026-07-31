@@ -26,6 +26,26 @@ export async function getDeliveryCharges(): Promise<DeliveryCharges> {
   };
 }
 
+// ── AI chatbot knowledge ("training") ────────────────────────────────────────
+// Free-text the owner writes (delivery info, warranty, FAQs, payment numbers,
+// policies, product advice…). Injected into the customer agent's instructions so
+// the bot answers using it. Updated live from /config/ai-knowledge — no code.
+export const AI_KNOWLEDGE_KEY = "ai_shop_knowledge";
+
+export async function getAgentKnowledge(): Promise<string> {
+  const row = await prisma.setting.findUnique({ where: { key: AI_KNOWLEDGE_KEY } });
+  return row?.value ?? "";
+}
+
+export async function saveAgentKnowledge(text: string): Promise<void> {
+  const value = (text || "").slice(0, 12000); // keep the prompt a sane size
+  await prisma.setting.upsert({
+    where: { key: AI_KNOWLEDGE_KEY },
+    create: { key: AI_KNOWLEDGE_KEY, value },
+    update: { value },
+  });
+}
+
 // ── Pre-orders ────────────────────────────────────────────────────────────────
 // A shop-wide switch: when on, the AI agent may take orders for out-of-stock
 // items (customer pays/receives when stock arrives). Off by default.

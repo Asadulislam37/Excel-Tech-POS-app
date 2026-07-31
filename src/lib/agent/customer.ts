@@ -3,6 +3,7 @@
 import { CUSTOMER_MODEL } from "@/lib/agent/gemini";
 import { customerTools } from "@/lib/agent/tools";
 import { runAgent, type ChatTurn } from "@/lib/agent/run";
+import { getAgentKnowledge } from "@/lib/settings";
 
 const SYSTEM = `You are the sales assistant for **Excel Tech**, a mobile phone and accessories shop in Shyamoli Square, Dhaka, Bangladesh. You help customers on chat.
 
@@ -40,10 +41,15 @@ HARD RULES:
 
 STYLE: Warm, concise, chat-friendly. Short messages. Use the customer's name if you know it. Don't expose internal IDs (SKUs, variantIds) unless asked.`;
 
-export function runCustomerAgent(history: ChatTurn[]) {
+export async function runCustomerAgent(history: ChatTurn[]) {
+  // Owner-written knowledge ("training") is appended as authoritative shop facts.
+  const knowledge = (await getAgentKnowledge()).trim();
+  const systemInstruction = knowledge
+    ? `${SYSTEM}\n\nSHOP KNOWLEDGE — provided by the shop owner. Treat this as authoritative, up-to-date facts about Excel Tech (delivery, warranty, payment, policies, FAQs, etc.). Use it to answer; prefer it over guessing. Still use the tools for live product/price/stock:\n${knowledge}`
+    : SYSTEM;
   return runAgent({
     model: CUSTOMER_MODEL,
-    systemInstruction: SYSTEM,
+    systemInstruction,
     tools: customerTools,
     history,
   });

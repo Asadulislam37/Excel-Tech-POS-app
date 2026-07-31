@@ -156,6 +156,7 @@ export const NAV: NavItem[] = [
       { label: "Warranty", href: "/config/warranty", built: true },
       { label: "Delivery Charge", href: "/config/delivery", built: true },
       { label: "AI & Pre-orders", href: "/config/ai", built: true },
+      { label: "Train AI Chatbot", href: "/config/ai-knowledge", built: true },
       { label: "User Management", href: "/config/users", built: true },
     ],
   },
